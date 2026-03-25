@@ -1,0 +1,1819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🇮🇹 Italy Holiday Let Analyser</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root {
+    --primary: #1A56A8;
+    --primary-dark: #123E82;
+    --primary-light: #E8F0FB;
+    --olive: #4A7C59;
+    --olive-light: #6FAB82;
+    --amber: #E8A838;
+    --cream: #F2F6FC;
+    --cream-dark: #E2EAF6;
+    --white: #FFFFFF;
+    --text: #1C2B40;
+    --text-med: #4A5E78;
+    --text-light: #7A92B0;
+    --border: #C8D8EE;
+    --shadow: rgba(26,86,168,0.07);
+    --shadow-hover: rgba(26,86,168,0.16);
+    --green: #1B6B38;
+    --negative: #B84C00;
+    --blue: #1A56A8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--cream); color: var(--text); min-height: 100vh; }
+
+  /* HEADER */
+  header { background: linear-gradient(135deg, #1A56A8 0%, #0C2F6B 100%); color: white; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(12,47,107,0.3); }
+  .header-left h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.3px; }
+  .header-left p { font-size: 0.8rem; opacity: 0.85; margin-top: 2px; }
+  .header-badge { background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.3); border-radius: 20px; padding: 5px 14px; font-size: 0.8rem; font-weight: 600; }
+
+  /* NAV */
+  nav { background: var(--white); border-bottom: 2px solid var(--border); display: flex; overflow-x: auto; padding: 0 16px; gap: 4px; }
+  .tab-btn { padding: 14px 18px; border: none; background: none; cursor: pointer; font-size: 0.88rem; font-weight: 500; color: var(--text-med); border-bottom: 3px solid transparent; white-space: nowrap; transition: all 0.2s; }
+  .tab-btn:hover { color: var(--primary); background: rgba(26,86,168,0.06); }
+  .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+
+  /* TABS */
+  .tab-content { display: none; padding: 24px; max-width: 1200px; margin: 0 auto; }
+  .tab-content.active { display: block; }
+
+  /* CARDS / GRID */
+  .card { background: var(--white); border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px var(--shadow); border: 1px solid var(--border); }
+  .card-title { font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .card-sub { font-size: 0.8rem; color: var(--text-med); margin-bottom: 16px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  @media (max-width: 900px) { .grid-3, .grid-4 { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 600px) { .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; } }
+
+  /* SECTION TITLE */
+  .section-header { margin-bottom: 20px; }
+  .section-header h2 { font-size: 1.4rem; font-weight: 700; color: var(--text); }
+  .section-header p { font-size: 0.88rem; color: var(--text-med); margin-top: 4px; }
+
+  /* SORT BAR */
+  .sort-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+  .sort-bar label { font-size: 0.85rem; font-weight: 600; color: var(--text-med); }
+  .sort-bar select, .sort-bar button { padding: 7px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.85rem; background: white; cursor: pointer; }
+  .sort-bar button.active { background: var(--primary); color: white; border-color: var(--primary); }
+  .sort-bar button:hover:not(.active) { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
+
+  /* REGION CARDS */
+  .regions-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+  .region-card { background: var(--white); border-radius: 14px; overflow: hidden; box-shadow: 0 2px 10px var(--shadow); border: 1px solid var(--border); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
+  .region-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px var(--shadow-hover); border-color: var(--primary); }
+  .region-card-header { padding: 16px 18px 12px; border-bottom: 1px solid var(--cream-dark); display: flex; justify-content: space-between; align-items: flex-start; }
+  .region-emoji { font-size: 2rem; line-height: 1; }
+  .region-name { font-size: 1.1rem; font-weight: 700; }
+  .region-tagline { font-size: 0.78rem; color: var(--text-med); margin-top: 2px; }
+  .budget-badge { border-radius: 20px; padding: 3px 10px; font-size: 0.72rem; font-weight: 700; }
+  .budget-excellent { background: #E6F4EA; color: #1B6B38; }
+  .budget-good { background: #E8F0FB; color: #1A56A8; }
+  .budget-possible { background: #FFF3E0; color: #B84C00; }
+  .region-stats { padding: 14px 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stat-item { }
+  .stat-label { font-size: 0.72rem; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.3px; }
+  .stat-value { font-size: 1rem; font-weight: 700; color: var(--text); margin-top: 1px; }
+  .stat-sub { font-size: 0.72rem; color: var(--text-med); }
+
+  /* TOOLTIPS */
+  .has-tip { position: relative; cursor: help; display: inline-block;
+    border-bottom: 1px dotted var(--text-light); }
+  .has-tip::after {
+    content: attr(data-tip);
+    position: absolute; bottom: calc(100% + 8px); left: 50%;
+    transform: translateX(-50%);
+    background: #1C2B40; color: white;
+    font-size: 0.76rem; font-weight: 400; line-height: 1.45;
+    padding: 8px 11px; border-radius: 7px;
+    width: 210px; white-space: normal; text-align: left;
+    pointer-events: none; opacity: 0;
+    transition: opacity 0.15s ease; z-index: 200;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.22);
+    text-transform: none; letter-spacing: 0;
+  }
+  .has-tip::before {
+    content: ''; position: absolute; bottom: calc(100% + 3px); left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent; border-top-color: #1C2B40;
+    pointer-events: none; opacity: 0;
+    transition: opacity 0.15s ease; z-index: 200;
+  }
+  .has-tip:hover::after, .has-tip:hover::before { opacity: 1; }
+  /* keep tooltip visible when near right/left edge */
+  .stat-item:first-child .has-tip::after { left: 0; transform: none; }
+  .stat-item:nth-child(2) .has-tip::after { left: auto; right: 0; transform: none; }
+  .stat-item:nth-child(4) .has-tip::after { left: auto; right: 0; transform: none; }
+  .region-card-footer { padding: 12px 18px; background: var(--cream); border-top: 1px solid var(--cream-dark); display: flex; justify-content: space-between; align-items: center; }
+  .demand-stars { color: var(--amber); font-size: 0.9rem; letter-spacing: 1px; }
+  .trend-badge { font-size: 0.75rem; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+  .trend-up { background: #E8F5E9; color: #2E7D32; }
+  .trend-fast { background: #E3F2FD; color: #1565C0; }
+  .trend-stable { background: #F3E5F5; color: #6A1B9A; }
+  .analyze-btn { background: var(--primary); color: white; border: none; padding: 8px 14px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+  .analyze-btn:hover { background: var(--primary-dark); }
+
+  /* DETAIL PANEL */
+  .region-detail-panel { background: var(--white); border-radius: 14px; padding: 24px; box-shadow: 0 4px 20px var(--shadow-hover); border: 2px solid var(--primary); margin-bottom: 24px; display: none; }
+  .region-detail-panel.active { display: block; }
+  .detail-close { float: right; background: none; border: none; font-size: 1.3rem; cursor: pointer; color: var(--text-med); }
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-top: 16px; }
+  @media (max-width: 700px) { .detail-grid { grid-template-columns: 1fr; } }
+  .highlight-tag { background: var(--cream); border-radius: 20px; padding: 4px 10px; font-size: 0.78rem; color: var(--text-med); display: inline-block; margin: 3px; }
+
+  /* INPUTS */
+  .input-group { margin-bottom: 16px; }
+  .input-group label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; color: var(--text); }
+  .input-group input, .input-group select, .input-group textarea { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; background: white; color: var(--text); outline: none; transition: border 0.2s; }
+  .input-group input:focus, .input-group select:focus, .input-group textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(26,86,168,0.12); }
+  .input-group .hint { font-size: 0.78rem; color: var(--text-med); margin-top: 4px; }
+  .input-row { display: flex; gap: 12px; }
+  .input-row .input-group { flex: 1; }
+
+  /* RANGE SLIDER */
+  .slider-group { margin-bottom: 16px; }
+  .slider-group label { display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 600; margin-bottom: 8px; }
+  .slider-group label span { color: var(--primary); font-size: 1rem; }
+  input[type=range] { width: 100%; accent-color: var(--primary); }
+
+  /* BUTTONS */
+  .btn-primary { background: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: background 0.2s; display: inline-flex; align-items: center; gap: 8px; }
+  .btn-primary:hover { background: var(--primary-dark); }
+  .btn-secondary { background: white; color: var(--primary); border: 2px solid var(--primary); padding: 10px 20px; border-radius: 8px; font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+  .btn-secondary:hover { background: var(--primary); color: white; }
+  .btn-olive { background: var(--olive); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-size: 0.88rem; font-weight: 600; cursor: pointer; }
+
+  /* RESULTS */
+  .result-box { background: var(--cream); border-radius: 10px; padding: 16px 20px; border: 1px solid var(--border); margin-bottom: 14px; }
+  .result-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--cream-dark); font-size: 0.88rem; }
+  .result-row:last-child { border-bottom: none; font-weight: 700; font-size: 0.95rem; }
+  .result-row .label { color: var(--text-med); }
+  .result-row .value { font-weight: 600; }
+  .value-green { color: var(--green); }
+  .value-red { color: var(--negative); }
+  .value-amber { color: #B84C00; }
+  .big-number { font-size: 2rem; font-weight: 800; color: var(--primary); }
+  .big-number-label { font-size: 0.8rem; color: var(--text-med); }
+
+  /* KPI BOXES */
+  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  @media (max-width: 700px) { .kpi-row { grid-template-columns: 1fr 1fr; } }
+  .kpi-box { background: white; border-radius: 10px; padding: 16px; border: 1px solid var(--border); text-align: center; }
+  .kpi-value { font-size: 1.6rem; font-weight: 800; color: var(--primary); }
+  .kpi-label { font-size: 0.75rem; color: var(--text-med); margin-top: 2px; }
+
+  /* TAX SECTION */
+  .tax-tier { background: white; border-radius: 10px; padding: 18px; margin-bottom: 14px; border-left: 4px solid var(--primary); }
+  .tax-tier.italy { border-left-color: var(--amber); }
+  .tax-tier.uk { border-left-color: var(--primary); }
+  .tax-tier.combined { border-left-color: var(--olive); }
+  .tax-tier h3 { font-size: 1rem; font-weight: 700; margin-bottom: 8px; }
+  .tax-rate-badge { background: var(--primary-light); padding: 3px 10px; border-radius: 12px; font-size: 0.82rem; font-weight: 700; color: var(--primary); display: inline-block; margin-bottom: 10px; }
+  .tax-rate-badge.uk { color: var(--primary-dark); }
+  .tax-rate-badge.net { color: var(--olive); }
+
+  /* INFO BOX */
+  .info-box { background: #E3F2FD; border: 1px solid #90CAF9; border-radius: 8px; padding: 12px 16px; font-size: 0.85rem; color: #1565C0; margin-bottom: 14px; }
+  .warn-box { background: #FFF8E1; border: 1px solid #FFD54F; border-radius: 8px; padding: 12px 16px; font-size: 0.85rem; color: #F57F17; margin-bottom: 14px; }
+  .success-box { background: #E8F5E9; border: 1px solid #A5D6A7; border-radius: 8px; padding: 12px 16px; font-size: 0.85rem; color: #2E7D32; margin-bottom: 14px; }
+
+  /* DRIVING TIME */
+  .driving-result { background: linear-gradient(135deg, #1565C0, #0D47A1); color: white; border-radius: 12px; padding: 20px; text-align: center; }
+  .driving-result .time { font-size: 2.5rem; font-weight: 800; }
+  .driving-result .route { font-size: 0.85rem; opacity: 0.85; margin-top: 4px; }
+
+  /* STEP INDICATOR */
+  .steps { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  .step { background: var(--cream); border-radius: 8px; padding: 8px 14px; font-size: 0.82rem; color: var(--text-med); border: 1px solid var(--border); display: flex; align-items: center; gap: 6px; }
+  .step.done { background: #E8F5E9; border-color: #A5D6A7; color: var(--green); }
+  .step.current { background: var(--primary); color: white; border-color: var(--primary); font-weight: 600; }
+
+  /* CHART CONTAINERS */
+  .chart-container { position: relative; height: 260px; }
+  .chart-container-tall { position: relative; height: 320px; }
+
+  /* TABS WITHIN TABS */
+  .inner-tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .inner-tab { padding: 7px 16px; border: 1px solid var(--border); border-radius: 20px; font-size: 0.83rem; cursor: pointer; background: white; transition: all 0.2s; }
+  .inner-tab.active { background: var(--primary); color: white; border-color: var(--primary); font-weight: 600; }
+
+  /* PROPERTY RESULT */
+  #property-result { display: none; }
+  #property-result.show { display: block; }
+
+  /* ACCORDION */
+  .accordion-item { border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; overflow: hidden; }
+  .accordion-header { padding: 14px 18px; font-weight: 600; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: white; user-select: none; }
+  .accordion-header:hover { background: var(--cream); }
+  .accordion-body { padding: 0 18px 16px; background: white; display: none; }
+  .accordion-body.open { display: block; }
+
+  /* DIVIDER */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+  hr.thick { border-top: 2px solid var(--cream-dark); margin: 24px 0; }
+
+  /* SPINNER */
+  .spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* TABLES */
+  table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  th { background: var(--cream); padding: 10px 14px; text-align: left; font-size: 0.8rem; font-weight: 600; color: var(--text-med); border-bottom: 2px solid var(--border); }
+  td { padding: 10px 14px; border-bottom: 1px solid var(--cream-dark); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--cream); }
+  .tfoot-row td { font-weight: 700; background: var(--cream); border-top: 2px solid var(--border); }
+
+  /* TAG */
+  .tag { display: inline-block; padding: 3px 9px; border-radius: 10px; font-size: 0.75rem; font-weight: 600; }
+  .tag-green { background: #E6F4EA; color: #1B6B38; }
+  .tag-amber { background: #FFF3E0; color: #B84C00; }
+  .tag-blue { background: var(--primary-light); color: var(--primary-dark); }
+  .tag-steel { background: #ECEFF1; color: #37474F; }
+
+  /* FOOTER NOTE */
+  .footnote { font-size: 0.75rem; color: var(--text-light); margin-top: 12px; font-style: italic; }
+
+  /* TAX BAND TOGGLE */
+  .tax-toggle { display: inline-flex; border: 2px solid var(--primary); border-radius: 10px; overflow: hidden; margin-bottom: 18px; }
+  .tax-toggle button { padding: 8px 20px; border: none; background: white; color: var(--primary); font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.18s; }
+  .tax-toggle button.active { background: var(--primary); color: white; }
+  .tax-toggle button:not(:last-child) { border-right: 1px solid var(--border); }
+  .tax-band-note { font-size: 0.8rem; color: var(--text-med); margin-left: 12px; align-self: center; }
+
+  /* PROPERTY INPUT SECTION */
+  .url-input-wrapper { display: flex; gap: 10px; }
+  .url-input-wrapper input { flex: 1; }
+  .prop-form { display: none; }
+  .prop-form.visible { display: block; }
+  .form-section-title { font-size: 0.85rem; font-weight: 700; color: var(--text-med); text-transform: uppercase; letter-spacing: 0.5px; margin: 16px 0 10px; }
+
+  /* REGION MAP TAB */
+  #italy-map { width: 100%; height: 520px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 2px 8px var(--shadow); }
+  .leaflet-container { font-family: inherit; }
+  .map-label-inner {
+    background: white; border: 1px solid var(--border);
+    border-radius: 8px; padding: 4px 8px;
+    font-size: 11px; line-height: 1.45; text-align: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.13);
+    white-space: nowrap; pointer-events: none;
+    color: var(--text);
+  }
+  .region-map-label { background: none !important; border: none !important; box-shadow: none !important; }
+  .map-legend { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; padding: 12px 18px; background: white; border-radius: 10px; border: 1px solid var(--border); margin-top: 12px; }
+  .map-legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--text-med); }
+  .map-legend-swatch { width: 16px; height: 16px; border-radius: 4px; flex-shrink: 0; }
+  .map-placeholder { text-align: center; padding: 40px 20px; color: var(--text-med); }
+  .map-placeholder .map-icon { font-size: 3rem; margin-bottom: 12px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>🇮🇹 Italy Holiday Let Analyser</h1>
+    <p>Personal investment research tool</p>
+  </div>
+  <div class="header-badge">Budget: £100k – £130k</div>
+</header>
+
+<nav>
+  <button class="tab-btn active" onclick="switchTab('regions')">🗺️ Regional Explorer</button>
+  <button class="tab-btn" onclick="switchTab('map')">🇮🇹 Region Map</button>
+  <button class="tab-btn" onclick="switchTab('analyser')">🏠 Property Analyser</button>
+  <button class="tab-btn" onclick="switchTab('tax')">📋 Tax Guide</button>
+  <button class="tab-btn" onclick="switchTab('costs')">💶 Cost Calculator</button>
+  <button class="tab-btn" onclick="switchTab('settings')">⚙️ Settings</button>
+</nav>
+
+<!-- ═══════════════════ TAB 1: REGIONAL EXPLORER ═══════════════════ -->
+<div id="tab-regions" class="tab-content active">
+  <div class="section-header">
+    <h2>Regional Explorer</h2>
+    <p>Regions accessible at a £100k–£130k budget with holiday let potential. Click any card for full analysis.</p>
+  </div>
+
+  <div class="sort-bar">
+    <label>Sort by:</label>
+    <select id="sort-select" onchange="renderRegions()">
+      <option value="yield">Gross Yield</option>
+      <option value="demand">Demand Rating</option>
+      <option value="price">Property Price (low→high)</option>
+      <option value="occupancy">Annual Occupancy Weeks</option>
+    </select>
+    <label style="margin-left:12px">Budget fit:</label>
+    <button class="active" onclick="filterBudget(this,'all')">All</button>
+    <button onclick="filterBudget(this,'excellent')">✅ Excellent</button>
+    <button onclick="filterBudget(this,'good')">🟡 Good</button>
+    <button onclick="filterBudget(this,'possible')">⚠️ Possible</button>
+  </div>
+
+  <div id="region-detail-panel" class="region-detail-panel"></div>
+  <div id="regions-grid" class="regions-grid"></div>
+</div>
+
+<!-- ═══════════════════ TAB 2: PROPERTY ANALYSER ═══════════════════ -->
+<div id="tab-analyser" class="tab-content">
+  <div class="section-header">
+    <h2>Property Analyser</h2>
+    <p>Paste an Idealista.it URL or enter property details manually to get a tailored return & driving time analysis.</p>
+  </div>
+
+  <div class="grid-2" style="align-items:start; gap:20px">
+    <div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">🔗 Property Input</div>
+        <div class="card-sub">Paste an Idealista listing URL below</div>
+
+        <div class="input-group">
+          <label>Idealista.it Property URL</label>
+          <div class="url-input-wrapper">
+            <input type="url" id="idealista-url" placeholder="https://www.idealista.it/en/immobile/12345678/" />
+            <button class="btn-primary" onclick="analyseUrl()"><span id="fetch-btn-text">Analyse</span></button>
+          </div>
+          <div class="hint">e.g. https://www.idealista.it/en/immobile/40528312/</div>
+        </div>
+
+        <div id="fetch-status" style="display:none"></div>
+
+        <hr class="thick">
+        <div class="form-section-title">Or enter details manually</div>
+
+        <div class="prop-form visible" id="prop-form">
+          <div class="input-row">
+            <div class="input-group">
+              <label>Asking Price (€)</label>
+              <input type="number" id="prop-price" value="115000" step="1000" min="50000" oninput="recalcProperty()"/>
+            </div>
+            <div class="input-group">
+              <label>Size (m²)</label>
+              <input type="number" id="prop-size" value="80" min="20" oninput="recalcProperty()"/>
+            </div>
+          </div>
+          <div class="input-row">
+            <div class="input-group">
+              <label>Bedrooms</label>
+              <select id="prop-beds" onchange="recalcProperty()">
+                <option value="1">1 bedroom</option>
+                <option value="2" selected>2 bedrooms</option>
+                <option value="3">3 bedrooms</option>
+                <option value="4">4+ bedrooms</option>
+              </select>
+            </div>
+            <div class="input-group">
+              <label>Region</label>
+              <select id="prop-region" onchange="recalcProperty()">
+                <option value="">— Select region —</option>
+                <option value="abruzzo">Abruzzo</option>
+                <option value="calabria">Calabria</option>
+                <option value="sicilia">Sicily</option>
+                <option value="puglia">Puglia</option>
+                <option value="basilicata">Basilicata</option>
+                <option value="molise">Molise</option>
+                <option value="marche">Le Marche</option>
+                <option value="sardegna">Sardinia</option>
+                <option value="friuli">Friuli-Venezia Giulia</option>
+                <option value="veneto">Veneto</option>
+              </select>
+            </div>
+          </div>
+          <div class="input-group">
+            <label>Property Address or Town (for driving time)</label>
+            <input type="text" id="prop-address" placeholder="e.g. Pescara, Abruzzo, Italy" oninput="recalcProperty()"/>
+            <div class="hint">Include town and region for best results</div>
+          </div>
+          <div class="input-group">
+            <label>Property Type</label>
+            <select id="prop-type" onchange="recalcProperty()">
+              <option value="apartment">Apartment / Flat</option>
+              <option value="house">House / Villa</option>
+              <option value="trullo">Trullo (Puglia)</option>
+              <option value="farmhouse">Farmhouse / Masseria</option>
+              <option value="cave">Sassi / Cave house (Matera)</option>
+            </select>
+          </div>
+
+          <hr style="margin:16px 0; border-color:var(--cream-dark)">
+          <div class="form-section-title">Rental assumptions</div>
+
+          <div class="slider-group">
+            <label>Weeks rented per year <span id="weeks-val">18</span></label>
+            <input type="range" id="weeks-slider" min="6" max="32" value="18" oninput="document.getElementById('weeks-val').textContent=this.value; recalcProperty()">
+          </div>
+          <div class="slider-group">
+            <label>Average nightly rate (€) <span id="nightly-val">85</span></label>
+            <input type="range" id="nightly-slider" min="40" max="250" value="85" oninput="document.getElementById('nightly-val').textContent=this.value; recalcProperty()">
+          </div>
+          <div class="slider-group">
+            <label>Personal use (weeks/year) <span id="personal-val">3</span></label>
+            <input type="range" id="personal-slider" min="0" max="12" value="3" oninput="document.getElementById('personal-val').textContent=this.value; recalcProperty()">
+          </div>
+
+          <button class="btn-primary" style="width:100%; justify-content:center; margin-top:8px" onclick="runFullAnalysis()">▶ Run Full Analysis</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RESULTS PANEL -->
+    <div id="property-result">
+      <div class="kpi-row">
+        <div class="kpi-box"><div class="kpi-value" id="kpi-gross-income">—</div><div class="kpi-label">Gross Annual Income</div></div>
+        <div class="kpi-box"><div class="kpi-value" id="kpi-net-income">—</div><div class="kpi-label">Net After All Tax</div></div>
+        <div class="kpi-box"><div class="kpi-value" id="kpi-yield">—</div><div class="kpi-label">Gross Yield</div></div>
+        <div class="kpi-box"><div class="kpi-value" id="kpi-net-yield">—</div><div class="kpi-label">Net Yield (after tax)</div></div>
+      </div>
+
+      <!-- Driving time card -->
+      <div id="driving-card" class="driving-result" style="margin-bottom:16px; display:none">
+        <div style="font-size:0.8rem; opacity:0.8; margin-bottom:6px">🚗 Driving time from Hastings</div>
+        <div class="time" id="driving-time-text">—</div>
+        <div class="route" id="driving-route-text">Calculating via ferry/tunnel...</div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px">
+          <div class="card-title" style="margin-bottom:0">Annual Income Breakdown</div>
+          <div class="tax-toggle" style="font-size:0.8rem">
+            <button id="atoggle-higher" class="active" onclick="setTaxBand('higher'); runFullAnalysis()">40% Higher</button>
+            <button id="atoggle-additional" onclick="setTaxBand('additional'); runFullAnalysis()">45% Additional</button>
+          </div>
+        </div>
+        <div class="result-box">
+          <div class="result-row"><span class="label">Gross rental income</span><span class="value" id="r-gross">—</span></div>
+          <div class="result-row"><span class="label">Platform fees (Airbnb ~3%)</span><span class="value value-red" id="r-platform">—</span></div>
+          <div class="result-row"><span class="label">Management agent (~22%)</span><span class="value value-red" id="r-mgmt">—</span></div>
+          <div class="result-row"><span class="label">Income after management</span><span class="value" id="r-after-mgmt">—</span></div>
+          <div class="result-row"><span class="label">🇮🇹 Italian tax (Cedolare Secca 21%)</span><span class="value value-red" id="r-italy-tax">—</span></div>
+          <div class="result-row"><span class="label" id="r-uk-tax-label">🇬🇧 UK additional tax (~19%)</span><span class="value value-red" id="r-uk-tax">—</span></div>
+          <div class="result-row"><span class="label">Annual running costs (IMU, ins. etc.)</span><span class="value value-red" id="r-running">—</span></div>
+          <div class="result-row"><span class="label">Net income after everything</span><span class="value value-green" id="r-net">—</span></div>
+        </div>
+        <p class="footnote">Management agent cost is optional — remove if self-managing. Tax figures are estimates; seek professional advice.</p>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">5-Year Projection</div>
+        <div class="chart-container"><canvas id="projection-chart"></canvas></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Purchase Cost Estimate</div>
+        <div id="purchase-costs-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ TAB 3: TAX GUIDE ═══════════════════ -->
+<div id="tab-tax" class="tab-content">
+  <div class="section-header">
+    <h2>Tax Guide</h2>
+    <p>Italian & UK tax obligations for a UK higher-rate taxpayer letting a holiday property in Italy.</p>
+  </div>
+
+  <div class="warn-box">⚠️ <strong>Disclaimer:</strong> This is an educational guide only. Always consult a qualified Italian commercialista and UK tax advisor before making investment decisions.</div>
+
+  <div style="display:flex; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:8px">
+    <span style="font-size:0.88rem; font-weight:600; color:var(--text-med); margin-right:4px">UK tax band:</span>
+    <div class="tax-toggle">
+      <button id="toggle-higher" class="active" onclick="setTaxBand('higher')">Higher Rate — 40%</button>
+      <button id="toggle-additional" onclick="setTaxBand('additional')">Additional Rate — 45%</button>
+    </div>
+    <span class="tax-band-note" id="tax-band-note">You pay 40% UK income tax; Italian 21% is credited → ~19% net additional to HMRC</span>
+  </div>
+
+  <div class="grid-2" style="gap:20px; align-items:start">
+    <div>
+      <div class="tax-tier italy" style="margin-bottom:14px">
+        <h3>🇮🇹 Italian Taxes on Rental Income</h3>
+        <div class="tax-rate-badge">Cedolare Secca: 21%</div>
+        <p style="font-size:0.88rem; color:var(--text-med); margin-bottom:10px">A flat substitute tax replacing IRPEF (income tax) and registration tax on rental contracts. Applied to <strong>gross rental income</strong> — no expense deductions under this regime.</p>
+        <div class="result-box" style="font-size:0.85rem">
+          <div class="result-row"><span class="label">First holiday let property rate</span><span class="value">21%</span></div>
+          <div class="result-row"><span class="label">2nd, 3rd, 4th property rate (since Jan 2025)</span><span class="value">26%</span></div>
+          <div class="result-row"><span class="label">Is it optional?</span><span class="value">Yes — opt in on tax return</span></div>
+          <div class="result-row"><span class="label">Can non-residents use it?</span><span class="value">✅ Yes</span></div>
+          <div class="result-row"><span class="label">When to file</span><span class="value">Annual Italian return (Modello 730/Unico), due Oct/Nov each year</span></div>
+        </div>
+        <div class="info-box" style="margin-top:0; margin-bottom:0">💡 You must register a <strong>CIN (Codice Identificativo Nazionale)</strong> — Italy's national short-let registration system introduced in 2024. Without this, you cannot legally advertise the property on Airbnb/Booking.com in Italy.</div>
+      </div>
+
+      <div class="tax-tier italy">
+        <h3>🇮🇹 Italian Property Ownership Taxes</h3>
+        <div class="result-box" style="font-size:0.85rem">
+          <div class="result-row"><span class="label">IMU (property ownership tax)</span><span class="value">~€300–700/yr</span></div>
+          <div class="result-row"><span class="label">Applies to</span><span class="value">Non-resident second homes</span></div>
+          <div class="result-row"><span class="label">Rate</span><span class="value">0.86%–1.14% of revalued cadastral value</span></div>
+          <div class="result-row"><span class="label">Cadastral value</span><span class="value">~15–25% of market price in south Italy</span></div>
+          <div class="result-row"><span class="label">TARI (waste/bins tax)</span><span class="value">€150–400/yr</span></div>
+          <div class="result-row"><span class="label">Payment schedule</span><span class="value">IMU: June & December</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="tax-tier uk" style="margin-bottom:14px">
+        <h3 id="uk-obligations-heading">🇬🇧 UK Tax Obligations (Higher Rate, 40%)</h3>
+        <div class="tax-rate-badge uk">HMRC Self Assessment Required</div>
+        <p style="font-size:0.88rem; color:var(--text-med); margin-bottom:10px">As a UK resident, you must declare worldwide income. Italian rental income goes on <strong>SA106</strong> (Foreign pages of your Self Assessment return). Italy has primary taxing rights under the 1988 UK-Italy Double Taxation Agreement.</p>
+        <div class="result-box" style="font-size:0.85rem">
+          <div class="result-row"><span class="label">Declaration form</span><span class="value">SA106 (supplementary foreign income pages)</span></div>
+          <div class="result-row"><span class="label">UK tax rate (your band)</span><span class="value" id="uk-rate-value">40% on net rental profit</span></div>
+          <div class="result-row"><span class="label">Foreign Tax Credit (FTC)</span><span class="value">Credit for Italian tax paid (up to UK rate)</span></div>
+          <div class="result-row"><span class="label">Net additional UK tax</span><span class="value" id="uk-net-additional-value">~19% (40% − 21% FTC)</span></div>
+          <div class="result-row"><span class="label">Currency conversion</span><span class="value">Declare in £ using HMRC exchange rates</span></div>
+          <div class="result-row"><span class="label">Italian residence certificate</span><span class="value">Get from HMRC online to claim DTA relief in Italy</span></div>
+        </div>
+      </div>
+
+      <div class="tax-tier uk" style="margin-bottom:14px">
+        <h3>🇬🇧 UK Capital Gains Tax (when you sell)</h3>
+        <div class="result-box" style="font-size:0.85rem">
+          <div class="result-row"><span class="label">Italy CGT rate</span><span class="value">26% on capital gain</span></div>
+          <div class="result-row"><span class="label">UK CGT rate (higher rate)</span><span class="value">24% on residential gains (from Oct 2024)</span></div>
+          <div class="result-row"><span class="label">DTA relief</span><span class="value">Credit for Italian CGT against UK CGT</span></div>
+          <div class="result-row"><span class="label">Annual CGT allowance (UK)</span><span class="value">£3,000 (2024/25 onwards)</span></div>
+          <div class="result-row"><span class="label">Italy exemption</span><span class="value">No CGT if held 5+ years (for natural persons)</span></div>
+        </div>
+        <div class="success-box" style="margin-bottom:0">✅ Hold the property for 5+ years in Italy and the Italian CGT of 26% is waived. Only UK CGT then applies at 24%, with your £3,000 annual allowance.</div>
+      </div>
+
+      <div class="tax-tier combined">
+        <h3>📊 Effective Combined Tax Rate (Worked Example)</h3>
+        <div class="tax-rate-badge net">Higher Rate (40%) Taxpayer</div>
+        <div id="tax-example"></div>
+        <div class="slider-group" style="margin-top:12px">
+          <label>Example gross rental income (€/yr) <span id="tax-ex-val">10,000</span></label>
+          <input type="range" id="tax-ex-slider" min="3000" max="25000" step="500" value="10000" oninput="document.getElementById('tax-ex-val').textContent=Number(this.value).toLocaleString(); calcTaxExample()">
+        </div>
+        <div class="chart-container" style="height:200px; margin-top:8px"><canvas id="tax-donut-chart"></canvas></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ TAB 4: COST CALCULATOR ═══════════════════ -->
+<div id="tab-costs" class="tab-content">
+  <div class="section-header">
+    <h2>Cost Calculator</h2>
+    <p>Full breakdown of purchase costs and annual running costs for a holiday let in Italy.</p>
+  </div>
+
+  <div class="grid-2" style="gap:20px; align-items:start">
+    <div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">Property Details</div>
+        <div class="input-row">
+          <div class="input-group">
+            <label>Purchase Price (€)</label>
+            <input type="number" id="cc-price" value="115000" step="1000" oninput="calcCosts()">
+          </div>
+          <div class="input-group">
+            <label>Size (m²)</label>
+            <input type="number" id="cc-size" value="80" oninput="calcCosts()">
+          </div>
+        </div>
+        <div class="input-group">
+          <label>Region</label>
+          <select id="cc-region" onchange="calcCosts()">
+            <option value="south">Southern Italy (Calabria, Sicily, Basilicata, Molise)</option>
+            <option value="central" selected>Central/Adriatic (Abruzzo, Le Marche)</option>
+            <option value="puglia">Puglia</option>
+            <option value="sardinia">Sardinia</option>
+            <option value="northeast">North-East (Friuli-Venezia Giulia, Veneto)</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label>Using letting agent?</label>
+          <select id="cc-agent" onchange="calcCosts()">
+            <option value="yes">Yes — full management (22% of income)</option>
+            <option value="no">No — self-managing</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label>Expected annual rental income (€)</label>
+          <input type="number" id="cc-income" value="9500" step="500" oninput="calcCosts()">
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">💳 One-Off Purchase Costs</div>
+        <div id="purchase-cost-table"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📅 Annual Running Costs</div>
+        <div id="running-cost-table"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <div class="card-title">📈 5-Year Cost & Return Overview</div>
+    <div class="chart-container-tall"><canvas id="cost-chart"></canvas></div>
+    <div id="five-year-summary" style="margin-top:16px"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════ TAB 5: SETTINGS ═══════════════════ -->
+<div id="tab-settings" class="tab-content">
+  <div class="section-header">
+    <h2>Settings</h2>
+    <p>Configure your API keys and personal parameters.</p>
+  </div>
+
+  <div class="grid-2" style="gap:20px; align-items:start">
+    <div class="card">
+      <div class="card-title">🗺️ Google Maps API Key</div>
+      <div class="card-sub">Required for accurate driving time calculations</div>
+
+      <div class="info-box">
+        <strong>Setup steps:</strong><br>
+        1. Go to <a href="https://developers.google.com/maps/documentation/javascript/get-api-key" target="_blank">Google Cloud Console</a><br>
+        2. Create a project → Enable <strong>Distance Matrix API</strong><br>
+        3. Create credentials → API Key<br>
+        4. (Optional) Restrict to your IP for security<br>
+        5. Paste the key below
+      </div>
+
+      <div class="input-group">
+        <label>API Key</label>
+        <input type="text" id="maps-api-key" placeholder="AIzaSy..." oninput="saveApiKey()">
+        <div class="hint">Stored only in this browser session — never sent anywhere except Google.</div>
+      </div>
+
+      <div id="api-key-status"></div>
+
+      <button class="btn-olive" onclick="testApiKey()" style="margin-top:8px">Test API Key</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">👤 Your Investment Profile</div>
+      <div class="input-group">
+        <label>UK Tax Band</label>
+        <select id="s-taxband">
+          <option value="basic">Basic rate (20%)</option>
+          <option value="higher" selected>Higher rate (40%)</option>
+          <option value="additional">Additional rate (45%)</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <label>Budget (£)</label>
+        <input type="number" id="s-budget" value="115000" step="5000">
+      </div>
+      <div class="input-group">
+        <label>GBP/EUR exchange rate</label>
+        <input type="number" id="s-fx" value="1.17" step="0.01">
+        <div class="hint">Used for UK tax calculations. Current approx: 1 GBP = 1.17 EUR</div>
+      </div>
+      <div class="input-group">
+        <label>Home address (for driving time)</label>
+        <input type="text" id="s-home" value="64 Canute Road, Hastings, TN35 5HT, UK">
+      </div>
+      <button class="btn-primary" onclick="saveSettings()" style="margin-top:8px">Save Settings</button>
+      <div id="settings-saved" style="display:none; color:var(--green); margin-top:8px; font-size:0.85rem">✅ Settings saved</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ TAB: REGION MAP ═══════════════════ -->
+<div id="tab-map" class="tab-content">
+  <div class="section-header">
+    <h2>Region Map</h2>
+    <p>Regions are shaded by demand rating — darker blue = stronger demand. Click any region for a summary.</p>
+  </div>
+  <div class="grid-2" style="gap:20px; align-items:start">
+    <div>
+      <div id="italy-map"></div>
+      <div class="map-legend">
+        <span style="font-size:0.8rem; font-weight:600; color:var(--text-med); margin-right:4px">Demand:</span>
+        <div class="map-legend-item"><div class="map-legend-swatch" style="background:#BDD7EE; border:1px solid #7EAEE0"></div>⭐⭐ Limited</div>
+        <div class="map-legend-item"><div class="map-legend-swatch" style="background:#7EAEE0; border:1px solid #3A7CC7"></div>⭐⭐⭐ Moderate</div>
+        <div class="map-legend-item"><div class="map-legend-swatch" style="background:#3A7CC7; border:1px solid #1A4F9F"></div>⭐⭐⭐⭐ Strong</div>
+        <div class="map-legend-item"><div class="map-legend-swatch" style="background:#1A4F9F; border:1px solid #0D2D6B"></div>⭐⭐⭐⭐⭐ Very high</div>
+      </div>
+    </div>
+    <div id="map-region-detail">
+      <div class="card map-placeholder">
+        <div class="map-icon">🇮🇹</div>
+        <div style="font-weight:600; margin-bottom:6px">Click any highlighted region on the map</div>
+        <div style="font-size:0.85rem">Each coloured region is one of the 10 areas analysed in this tool. Hover to see the name, click for full stats.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────
+// DATA
+// ─────────────────────────────────────────────────────────────
+const REGIONS = [
+  {
+    id:'abruzzo', name:'Abruzzo', emoji:'🏔️',
+    tagline:"Mountains, Sea & Great Value",
+    avgPriceMin:800, avgPriceMax:1200,
+    typicalPrice:108000,
+    nightlyMin:65, nightlyMax:105,
+    occupancyMin:14, occupancyMax:20, occupancyMid:17,
+    yieldMin:5.5, yieldMax:8.0,
+    demandRating:4, trend:'growing',
+    budgetFit:'good',
+    seasons:['Adriatic coast (Jun–Sep)','Ski resorts (Dec–Mar)'],
+    highlights:['2 National Parks','Adriatic coastline','Ski resorts','Historic hilltop towns','Improving UK flight links'],
+    notes:"One of Italy's best-kept secrets. Year-round potential (coast + mountains) and great value for money. ~2.5hr drive from Rome Fiumicino airport.",
+    tourists:'5.2M',
+    drivingHrsBase:26,
+    italianSlug:'abruzzo',
+    airports:['Pescara (PSR)','Rome FCO (transfer)'],
+    riskLevel:'medium',
+  },
+  {
+    id:'calabria', name:'Calabria', emoji:'🏖️',
+    tagline:"Beautiful Beaches, Best Coastal Value",
+    avgPriceMin:650, avgPriceMax:1000,
+    typicalPrice:88000,
+    nightlyMin:55, nightlyMax:90,
+    occupancyMin:12, occupancyMax:18, occupancyMid:14,
+    yieldMin:5.0, yieldMax:7.5,
+    demandRating:3, trend:'stable',
+    budgetFit:'excellent',
+    seasons:['Summer only (Jun–Sep)'],
+    highlights:['300km coastline','Crystal-clear water','Cheapest coastal Italy','Greek ruins & history'],
+    notes:"Highest coastal value-for-money in Italy. Very seasonal (summer only) and less accessible than other regions. Best for those prioritising affordability over occupancy.",
+    tourists:'3.1M',
+    drivingHrsBase:30,
+    italianSlug:'calabria',
+    airports:["Lamezia Terme (SUF)","Reggio Calabria (REG)"],
+    riskLevel:'medium-high',
+  },
+  {
+    id:'sicilia', name:'Sicily', emoji:'🌋',
+    tagline:"Culture, Cuisine & Growing Fast",
+    avgPriceMin:800, avgPriceMax:1100,
+    typicalPrice:118000,
+    nightlyMin:80, nightlyMax:130,
+    occupancyMin:18, occupancyMax:26, occupancyMid:22,
+    yieldMin:6.0, yieldMax:9.5,
+    demandRating:5, trend:'growing-fast',
+    budgetFit:'good',
+    seasons:['Spring (Apr–Jun)','Peak summer','Autumn (Sep–Oct)'],
+    highlights:['Year-round appeal','Rich culture & food','4 UK airports served','Growing international profile','Affordable rural/inland'],
+    notes:"Strongest demand growth in southern Italy. Multiple airports means good accessibility. A 2-bed in rural Sicily or smaller coastal towns is achievable at budget. Palermo and Catania areas offer best ROI.",
+    tourists:'16.7M',
+    drivingHrsBase:33,
+    italianSlug:'sicilia',
+    airports:['Palermo (PMO)','Catania (CTA)','Trapani (TPS)','Comiso (CIY)'],
+    riskLevel:'medium',
+  },
+  {
+    id:'puglia', name:'Puglia', emoji:'🫒',
+    tagline:"Italy's Hottest Holiday Destination",
+    avgPriceMin:900, avgPriceMax:1500,
+    typicalPrice:128000,
+    nightlyMin:90, nightlyMax:145,
+    occupancyMin:18, occupancyMax:26, occupancyMid:22,
+    yieldMin:6.5, yieldMax:9.5,
+    demandRating:5, trend:'very-strong',
+    budgetFit:'possible',
+    seasons:['Easter onwards','Peak summer','Autumn (to Oct)'],
+    highlights:['Iconic trulli houses','Baroque cities (Lecce, Ostuni)','Two coastlines','World-class food & wine','Very strong UK demand'],
+    notes:"Most in-demand region for UK buyers — prices rising fast. Budget stretches inland (Valle d'Itria fringe, Salento interior). A trullo or 2-bed townhouse is still achievable. Brindisi airport has direct UK flights.",
+    tourists:'18.2M',
+    drivingHrsBase:28,
+    italianSlug:'puglia',
+    airports:['Brindisi (BDS)','Bari (BRI)'],
+    riskLevel:'low',
+  },
+  {
+    id:'basilicata', name:'Basilicata', emoji:'🪨',
+    tagline:"Matera & The Undiscovered South",
+    avgPriceMin:700, avgPriceMax:1050,
+    typicalPrice:97000,
+    nightlyMin:60, nightlyMax:98,
+    occupancyMin:12, occupancyMax:18, occupancyMid:15,
+    yieldMin:5.0, yieldMax:7.5,
+    demandRating:3, trend:'growing',
+    budgetFit:'excellent',
+    seasons:['Summer','Matera: year-round cultural tourism'],
+    highlights:['Matera (UNESCO World Heritage)','Authentic Italian culture','Low competition','Sassi cave houses unique rental','Improving road links'],
+    notes:"Matera (European Capital of Culture 2019) drives strong cultural tourism. Cave house (sassi) rentals command a premium. Least-known of the good-value regions — low competition, growing awareness.",
+    tourists:'2.8M',
+    drivingHrsBase:29,
+    italianSlug:'basilicata',
+    airports:['Bari (BRI – 1hr drive)','Naples (NAP – 2hr drive)'],
+    riskLevel:'medium',
+  },
+  {
+    id:'molise', name:'Molise', emoji:'🌾',
+    tagline:"Italy's Cheapest Region — Authentic Rural",
+    avgPriceMin:500, avgPriceMax:800,
+    typicalPrice:62000,
+    nightlyMin:42, nightlyMax:68,
+    occupancyMin:8, occupancyMax:14, occupancyMid:10,
+    yieldMin:3.0, yieldMax:5.5,
+    demandRating:2, trend:'stable',
+    budgetFit:'excellent',
+    seasons:['Summer (Jul–Aug mainly)'],
+    highlights:['Lowest property prices in Italy','Authentic untouched villages','Very low competition','High personal use appeal'],
+    notes:"Lowest prices in Italy — ideal if you prioritise personal use over yield. Tourism infrastructure is limited meaning lower occupancy, but entry cost is minimal. Better as a personal retreat than pure investment.",
+    tourists:'0.9M',
+    drivingHrsBase:27,
+    italianSlug:'molise',
+    airports:['Naples (NAP – 1.5hr)','Pescara (PSR – 1hr)'],
+    riskLevel:'high',
+  },
+  {
+    id:'marche', name:'Le Marche', emoji:'🏰',
+    tagline:"The New Tuscany, Without the Crowds",
+    avgPriceMin:900, avgPriceMax:1350,
+    typicalPrice:112000,
+    nightlyMin:72, nightlyMax:112,
+    occupancyMin:14, occupancyMax:22, occupancyMid:17,
+    yieldMin:5.0, yieldMax:8.0,
+    demandRating:4, trend:'growing',
+    budgetFit:'good',
+    seasons:['Spring (May–Jun)','Peak summer (Adriatic)','Autumn harvest season'],
+    highlights:['Adriatic coast + hilltop towns','Genuine local culture','Less touristy than Tuscany','Strong food & wine trail','Accessible from Ancona'],
+    notes:"Often called the new Tuscany. Strong blend of coast and countryside. Undervalued relative to quality — good entry point now before prices rise further. Ancona airport has some UK connections.",
+    tourists:'7.4M',
+    drivingHrsBase:25,
+    italianSlug:'marche',
+    airports:['Ancona (AOI)','Bologna (BLQ – transfer)'],
+    riskLevel:'low-medium',
+  },
+  {
+    id:'friuli', name:'Friuli-Venezia Giulia', emoji:'🍷',
+    tagline:"Wine Country, Alps & the Adriatic",
+    avgPriceMin:700, avgPriceMax:1100,
+    typicalPrice:103000,
+    nightlyMin:58, nightlyMax:96,
+    occupancyMin:14, occupancyMax:20, occupancyMid:16,
+    yieldMin:5.0, yieldMax:7.5,
+    demandRating:3, trend:'growing',
+    budgetFit:'good',
+    seasons:['Summer (coast & Carso hills)','Autumn (wine harvest & food tourism)'],
+    highlights:['World-class DOC/DOCG wines (Collio, Friuli)','Trieste — cosmopolitan Habsburg port city','Dolomite & Julian Alps access','Shortest drive from UK of all Italian regions','Less crowded than Tuscany or Puglia'],
+    notes:"Italy's most underrated region for UK investors. The Collio and Friuli Colli Orientali wine appellations are world-famous. Trieste has a rich Habsburg cultural identity unlike anywhere else in Italy. At ~18 hrs drive from Hastings, it's the easiest Italian region to reach by car. Property values are moderate with good growth potential as the region gains wider recognition.",
+    tourists:'8.2M',
+    drivingHrsBase:18,
+    italianSlug:'friuli-venezia-giulia',
+    airports:['Trieste (TRS)','Venice Marco Polo (VCE – 1.5hr)','Treviso (TSF – 1.5hr)'],
+    riskLevel:'low-medium',
+  },
+  {
+    id:'veneto', name:'Veneto', emoji:'🛶',
+    tagline:"Venice, Verona & the Prosecco Hills",
+    avgPriceMin:1000, avgPriceMax:1800,
+    typicalPrice:126000,
+    nightlyMin:85, nightlyMax:140,
+    occupancyMin:20, occupancyMax:28, occupancyMid:24,
+    yieldMin:5.5, yieldMax:8.5,
+    demandRating:5, trend:'growing',
+    budgetFit:'possible',
+    seasons:['Spring (Apr–Jun)','Peak summer','Autumn (Prosecco harvest, Verona opera)'],
+    highlights:['Overflow demand from Venice','Lake Garda eastern shore','Verona & Shakespeare country','Prosecco DOCG hills (UNESCO since 2019)','Dolomites UNESCO access','Best UK flight connections in Italy'],
+    notes:"Italy's most visited region (70M+ tourists/yr). Venice itself is regulated and prohibitively expensive, but the Veneto hinterland is a different story. Budget works in: the Prosecco hills of Conegliano-Valdobbiadene, the Euganean Hills thermal spa area, eastern Lake Garda (Lazise/Bardolino), or rural hillside villages. Excellent flight connections from multiple UK airports via Venice, Verona, or Treviso.",
+    tourists:'70M+',
+    drivingHrsBase:16,
+    italianSlug:'veneto',
+    airports:['Venice Marco Polo (VCE)','Verona (VRN)','Treviso (TSF – Ryanair hub)'],
+    riskLevel:'low-medium',
+  },
+  {
+    id:'sardegna', name:'Sardinia', emoji:'🏝️',
+    tagline:"Stunning Beaches, High Nightly Rates",
+    avgPriceMin:800, avgPriceMax:1400,
+    typicalPrice:122000,
+    nightlyMin:85, nightlyMax:140,
+    occupancyMin:12, occupancyMax:18, occupancyMid:15,
+    yieldMin:5.5, yieldMax:8.5,
+    demandRating:4, trend:'growing',
+    budgetFit:'possible',
+    seasons:['Peak: Jul–Aug','Good: Jun & Sep'],
+    highlights:['World-class beaches','Strong UK demand','Multiple airports','Unique Sardinian culture','Premium nightly rates'],
+    notes:"Extremely concentrated season (mostly Jul–Aug) but very high nightly rates. Inland properties achievable at budget but rental demand is mainly coastal. Budget fits better in Ogliastra or Sulcis inland areas.",
+    tourists:'15.5M',
+    drivingHrsBase:36,
+    italianSlug:'sardegna',
+    airports:['Cagliari (CAG)','Olbia (OLB)','Alghero (AHO)'],
+    riskLevel:'medium',
+  },
+];
+
+// Settings store
+let settings = {
+  mapsApiKey: 'AIzaSyBs6VLkAkSyw3C7iSmbChTfgF61ZtPSIio',
+  taxBand: 'higher',
+  budget: 115000,
+  fx: 1.17,
+  home: '64 Canute Road, Hastings, TN35 5HT, UK',
+};
+
+function getUkRate() {
+  return settings.taxBand === 'additional' ? 0.45 : 0.40;
+}
+
+function setTaxBand(band) {
+  settings.taxBand = band;
+  // Update all toggles that may exist on the page
+  ['toggle-higher','atoggle-higher'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('active', band === 'higher');
+  });
+  ['toggle-additional','atoggle-additional'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('active', band === 'additional');
+  });
+  // Also sync the settings tab dropdown
+  const sel = document.getElementById('s-taxband');
+  if (sel) sel.value = band;
+  // Update all dynamic tax-rate text across the Tax Guide tab
+  const rate = band === 'additional' ? 45 : 40;
+  const net  = rate - 21;
+  const bandLabel = band === 'additional' ? 'Additional Rate' : 'Higher Rate';
+
+  const note = document.getElementById('tax-band-note');
+  if (note) note.textContent = `You pay ${rate}% UK income tax; Italian 21% is credited → ~${net}% net additional to HMRC`;
+
+  const heading = document.getElementById('uk-obligations-heading');
+  if (heading) heading.textContent = `🇬🇧 UK Tax Obligations (${bandLabel}, ${rate}%)`;
+
+  const rateVal = document.getElementById('uk-rate-value');
+  if (rateVal) rateVal.textContent = `${rate}% on net rental profit`;
+
+  const netVal = document.getElementById('uk-net-additional-value');
+  if (netVal) netVal.textContent = `~${net}% (${rate}% − 21% FTC)`;
+
+  calcTaxExample();
+}
+
+let budgetFilter = 'all';
+let projectionChart = null;
+let taxDonutChart = null;
+let costChart = null;
+
+// ─────────────────────────────────────────────────────────────
+// TAB SWITCHING
+// ─────────────────────────────────────────────────────────────
+function switchTab(id) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  event.target.classList.add('active');
+  if (id === 'tax') calcTaxExample();
+  if (id === 'costs') calcCosts();
+  if (id === 'map') setTimeout(initRegionMap, 60);
+}
+
+// ─────────────────────────────────────────────────────────────
+// REGIONAL EXPLORER
+// ─────────────────────────────────────────────────────────────
+function filterBudget(btn, val) {
+  budgetFilter = val;
+  document.querySelectorAll('.sort-bar button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderRegions();
+}
+
+function renderRegions() {
+  const sortBy = document.getElementById('sort-select').value;
+  let data = [...REGIONS];
+
+  if (budgetFilter !== 'all') data = data.filter(r => r.budgetFit === budgetFilter);
+
+  data.sort((a, b) => {
+    if (sortBy === 'yield') return b.yieldMax - a.yieldMax;
+    if (sortBy === 'demand') return b.demandRating - a.demandRating;
+    if (sortBy === 'price') return a.typicalPrice - b.typicalPrice;
+    if (sortBy === 'occupancy') return b.occupancyMax - a.occupancyMax;
+    return 0;
+  });
+
+  const grid = document.getElementById('regions-grid');
+  grid.innerHTML = data.map(r => {
+    const stars = '★'.repeat(r.demandRating) + '☆'.repeat(5 - r.demandRating);
+    const trendLabel = { 'growing': '↑ Growing', 'growing-fast': '↑↑ Fast growth', 'very-strong': '↑↑↑ Very strong', 'stable': '→ Stable' }[r.trend];
+    const trendClass = { 'growing': 'trend-up', 'growing-fast': 'trend-fast', 'very-strong': 'trend-fast', 'stable': 'trend-stable' }[r.trend];
+    const budgetLabel = { 'excellent': '✅ Excellent fit', 'good': '🟡 Good fit', 'possible': '⚠️ Possible' }[r.budgetFit];
+    const budgetClass = { 'excellent': 'budget-excellent', 'good': 'budget-good', 'possible': 'budget-possible' }[r.budgetFit];
+    const grossIncomeMid = Math.round(r.nightlyMid || ((r.nightlyMin + r.nightlyMax) / 2) * r.occupancyMid * 7 / 52 * 52 * 7);
+    const annualIncome = Math.round(((r.nightlyMin + r.nightlyMax) / 2) * r.occupancyMid * 7);
+
+    return `
+      <div class="region-card" onclick="showRegionDetail('${r.id}')">
+        <div class="region-card-header">
+          <div>
+            <div style="font-size:2rem">${r.emoji}</div>
+            <div class="region-name">${r.name}</div>
+            <div class="region-tagline">${r.tagline}</div>
+          </div>
+          <span class="budget-badge ${budgetClass} has-tip" data-tip="${{excellent:'Properties well under £130k — strong selection at budget.',good:'Properties available at budget, though choice may be limited in prime spots.',possible:'Prices are rising fast here — budget reaches inland/rural areas only.'}[r.budgetFit]}" style="border-bottom:none; cursor:help">${budgetLabel}</span>
+        </div>
+        <div class="region-stats">
+          <div class="stat-item">
+            <div class="stat-label"><span class="has-tip" data-tip="Estimated purchase price for a 2-bed property in this region, based on 2024–25 market listings. Price per m² range gives a sense of what your budget buys in size.">Typical price</span></div>
+            <div class="stat-value">€${(r.typicalPrice/1000).toFixed(0)}k</div>
+            <div class="stat-sub">€${r.avgPriceMin}–${r.avgPriceMax}/m²</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label"><span class="has-tip" data-tip="Gross annual rental income ÷ purchase price. Calculated at mid-range nightly rate × mid occupancy weeks × 7 nights. Before tax, management fees, or running costs.">Gross yield</span></div>
+            <div class="stat-value">${r.yieldMin}–${r.yieldMax}%</div>
+            <div class="stat-sub">est. annual</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label"><span class="has-tip" data-tip="Estimated gross rental income at mid-range nightly rate (€${Math.round((r.nightlyMin+r.nightlyMax)/2)}/night) × ${r.occupancyMid} weeks × 7 nights. This is before Italian tax (21%), UK tax, and any management fees.">Rental income</span></div>
+            <div class="stat-value">€${Math.round(annualIncome/1000)}k</div>
+            <div class="stat-sub">${r.occupancyMid} wks/yr mid est.</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label"><span class="has-tip" data-tip="Estimated bookable weeks per year based on typical holiday demand for this region. The range (${r.occupancyMin}–${r.occupancyMax} wks) reflects a low-to-high scenario. Shorter seasons mean more reliance on peak-week pricing.">Season</span></div>
+            <div class="stat-value">${r.occupancyMin}–${r.occupancyMax}</div>
+            <div class="stat-sub">weeks/year</div>
+          </div>
+        </div>
+        <div class="region-card-footer">
+          <div style="position:relative">
+            <div class="demand-stars has-tip" data-tip="Demand rating 1–5 stars, based on annual tourist arrivals, UK traveller interest, and short-let booking platform data for this region.">${stars}</div>
+            <div style="font-size:0.72rem; color:var(--text-light)">Demand</div>
+          </div>
+          <span class="trend-badge ${trendClass} has-tip" data-tip="Market trajectory based on year-on-year tourist arrivals and short-let booking trends. Reflects whether demand is growing, flat, or declining.">${trendLabel}</span>
+          <button class="analyze-btn" onclick="event.stopPropagation(); loadRegionIntoAnalyser('${r.id}')">Analyse →</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function showRegionDetail(id) {
+  const r = REGIONS.find(x => x.id === id);
+  if (!r) return;
+  const panel = document.getElementById('region-detail-panel');
+  const stars = '★'.repeat(r.demandRating) + '☆'.repeat(5 - r.demandRating);
+  const annualIncomeMin = Math.round(r.nightlyMin * r.occupancyMin * 7);
+  const annualIncomeMax = Math.round(r.nightlyMax * r.occupancyMax * 7);
+  const italyTaxMin = Math.round(annualIncomeMin * 0.21);
+  const italyTaxMax = Math.round(annualIncomeMax * 0.21);
+  const ukTaxMin = Math.round(annualIncomeMin * 0.19);
+  const ukTaxMax = Math.round(annualIncomeMax * 0.19);
+  const netMin = annualIncomeMin - italyTaxMin - ukTaxMin - 1800;
+  const netMax = annualIncomeMax - italyTaxMax - ukTaxMax - 1800;
+  const driveHrs = r.drivingHrsBase;
+
+  panel.innerHTML = `
+    <button class="detail-close" onclick="document.getElementById('region-detail-panel').classList.remove('active')">✕</button>
+    <h2 style="font-size:1.5rem">${r.emoji} ${r.name}</h2>
+    <p style="color:var(--text-med); font-size:0.9rem; margin-top:4px">${r.tagline}</p>
+    <div style="margin:10px 0">${r.seasons.map(s => `<span class="highlight-tag">🗓️ ${s}</span>`).join('')}</div>
+    <p style="font-size:0.88rem; margin-bottom:16px">${r.notes}</p>
+    <div class="detail-grid">
+      <div>
+        <div class="card-title" style="margin-bottom:10px">📊 Financial Overview</div>
+        <div class="result-box">
+          <div class="result-row"><span class="label">Typical property price</span><span class="value">€${(r.typicalPrice/1000).toFixed(0)}k</span></div>
+          <div class="result-row"><span class="label">Price per m²</span><span class="value">€${r.avgPriceMin}–€${r.avgPriceMax}</span></div>
+          <div class="result-row"><span class="label">Avg nightly rate</span><span class="value">€${r.nightlyMin}–€${r.nightlyMax}</span></div>
+          <div class="result-row"><span class="label">Occupancy weeks</span><span class="value">${r.occupancyMin}–${r.occupancyMax} wks/yr</span></div>
+          <div class="result-row"><span class="label">Gross rental income</span><span class="value">€${annualIncomeMin.toLocaleString()}–€${annualIncomeMax.toLocaleString()}</span></div>
+          <div class="result-row"><span class="label">After Italian tax (21%)</span><span class="value value-red">–€${italyTaxMin.toLocaleString()}–€${italyTaxMax.toLocaleString()}</span></div>
+          <div class="result-row"><span class="label">After UK addl tax (~19%)</span><span class="value value-red">–€${ukTaxMin.toLocaleString()}–€${ukTaxMax.toLocaleString()}</span></div>
+          <div class="result-row"><span class="label">Est. net income</span><span class="value value-green">€${netMin.toLocaleString()}–€${netMax.toLocaleString()}</span></div>
+          <div class="result-row"><span class="label">Gross yield range</span><span class="value">${r.yieldMin}–${r.yieldMax}%</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="card-title" style="margin-bottom:10px">✈️ Access & Logistics</div>
+        <div class="result-box">
+          <div class="result-row"><span class="label">Nearest airports</span><span class="value">${r.airports.join(', ')}</span></div>
+          <div class="result-row"><span class="label">Drive from Hastings</span><span class="value">~${driveHrs}–${driveHrs+3} hrs via ferry</span></div>
+          <div class="result-row"><span class="label">Annual tourists</span><span class="value">${r.tourists}</span></div>
+          <div class="result-row"><span class="label">Demand rating</span><span class="value" style="color:var(--amber)">${stars}</span></div>
+          <div class="result-row"><span class="label">Investment risk</span><span class="value"><span class="tag ${r.riskLevel==='low'?'tag-green':r.riskLevel==='medium'||r.riskLevel==='low-medium'?'tag-amber':'tag-steel'}">${r.riskLevel}</span></span></div>
+        </div>
+        <div class="card-title" style="margin-top:14px; margin-bottom:8px">🌟 Highlights</div>
+        ${r.highlights.map(h => `<span class="highlight-tag">• ${h}</span>`).join('')}
+      </div>
+      <div>
+        <div class="card-title" style="margin-bottom:10px">🏘️ Budget Fit (£100–130k)</div>
+        <div class="result-box">
+          <div class="result-row"><span class="label">Budget fit rating</span><span class="value"><span class="tag ${{excellent:'tag-green',good:'tag-blue',possible:'tag-amber'}[r.budgetFit]}">${r.budgetFit.toUpperCase()}</span></span></div>
+          <div class="result-row"><span class="label">What £115k gets you</span><span class="value">${getWhatBudgetGets(r)}</span></div>
+        </div>
+        <div style="margin-top:14px">
+          <button class="btn-primary" style="width:100%; justify-content:center" onclick="loadRegionIntoAnalyser('${r.id}'); switchTabDirect('analyser')">
+            Open Full Analysis →
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+  panel.classList.add('active');
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function getWhatBudgetGets(r) {
+  const budgetEur = Math.round(115000 * 1.17);
+  const sqm = Math.round(budgetEur / ((r.avgPriceMin + r.avgPriceMax) / 2));
+  if (sqm > 100) return `~${sqm}m² (3-bed house)`;
+  if (sqm > 70) return `~${sqm}m² (2-bed house/apt)`;
+  if (sqm > 50) return `~${sqm}m² (1–2 bed apt)`;
+  return `~${sqm}m² (1 bed — stretch the budget)`;
+}
+
+function loadRegionIntoAnalyser(id) {
+  const r = REGIONS.find(x => x.id === id);
+  if (!r) return;
+  document.getElementById('prop-region').value = id;
+  document.getElementById('prop-price').value = r.typicalPrice;
+  document.getElementById('nightly-slider').value = Math.round((r.nightlyMin + r.nightlyMax) / 2);
+  document.getElementById('nightly-val').textContent = Math.round((r.nightlyMin + r.nightlyMax) / 2);
+  document.getElementById('weeks-slider').value = r.occupancyMid;
+  document.getElementById('weeks-val').textContent = r.occupancyMid;
+  runFullAnalysis();
+}
+
+function switchTabDirect(id) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  const btns = document.querySelectorAll('.tab-btn');
+  const tabMap = {regions:0, map:1, analyser:2, tax:3, costs:4, settings:5};
+  btns[tabMap[id]].classList.add('active');
+}
+
+// ─────────────────────────────────────────────────────────────
+// PROPERTY ANALYSER
+// ─────────────────────────────────────────────────────────────
+async function analyseUrl() {
+  const url = document.getElementById('idealista-url').value.trim();
+  if (!url) return;
+
+  const statusEl = document.getElementById('fetch-status');
+  statusEl.style.display = 'block';
+  statusEl.innerHTML = '<div class="info-box">⏳ Attempting to read listing... (may be blocked by browser security)</div>';
+  document.getElementById('fetch-btn-text').innerHTML = '<div class="spinner"></div>';
+
+  // Try to extract region from URL
+  const regionMap = {
+    'abruzzo':'abruzzo','calabria':'calabria','sicilia':'sicilia','sicily':'sicilia',
+    'puglia':'puglia','basilicata':'basilicata','molise':'molise',
+    'marche':'marche','sardegna':'sardegna','sardinia':'sardegna',
+    'friuli':'friuli','friuli-venezia':'friuli','venezia-giulia':'friuli',
+    'veneto':'veneto','venezia':'veneto','verona':'veneto','treviso':'veneto'
+  };
+
+  let detectedRegion = '';
+  for (const [key, val] of Object.entries(regionMap)) {
+    if (url.toLowerCase().includes(key)) { detectedRegion = val; break; }
+  }
+
+  // Extract property ID from URL
+  const idMatch = url.match(/immobile\/(\d+)/);
+  const propId = idMatch ? idMatch[1] : null;
+
+  try {
+    // Attempt fetch via a CORS proxy (may not work — just demonstrates the concept)
+    const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`, { signal: AbortSignal.timeout(8000) });
+    if (res.ok) {
+      const html = await res.text();
+      const priceMatch = html.match(/[\€\$]?\s*([\d\.]+\.?\d*)\s*(?:€)?/);
+      const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+      const priceNumMatch = html.match(/"price"\s*:\s*"?([\d,\.]+)"?/i) || html.match(/data-price="([\d,\.]+)"/i);
+
+      let parsedPrice = null;
+      if (priceNumMatch) {
+        parsedPrice = parseInt(priceNumMatch[1].replace(/[,\.]/g, '').substring(0, 7));
+        if (parsedPrice > 10000 && parsedPrice < 5000000) {
+          document.getElementById('prop-price').value = parsedPrice;
+        }
+      }
+
+      if (detectedRegion) document.getElementById('prop-region').value = detectedRegion;
+
+      statusEl.innerHTML = `<div class="success-box">✅ Listing read! ${detectedRegion ? 'Region detected: ' + detectedRegion : ''} Please verify details below and fill in any missing fields.</div>`;
+    } else { throw new Error('Blocked'); }
+  } catch(e) {
+    // CORS blocked — guide user to manual entry
+    statusEl.innerHTML = `<div class="warn-box">⚠️ Auto-fetch was blocked (normal browser security). ${detectedRegion ? '✅ Region detected from URL: <strong>' + detectedRegion + '</strong>. ' : ''}Please fill in the details below from the Idealista listing.</div>`;
+    if (detectedRegion) {
+      document.getElementById('prop-region').value = detectedRegion;
+      const r = REGIONS.find(x => x.id === detectedRegion);
+      if (r) {
+        document.getElementById('prop-price').value = r.typicalPrice;
+        document.getElementById('nightly-slider').value = Math.round((r.nightlyMin + r.nightlyMax) / 2);
+        document.getElementById('nightly-val').textContent = Math.round((r.nightlyMin + r.nightlyMax) / 2);
+        document.getElementById('weeks-slider').value = r.occupancyMid;
+        document.getElementById('weeks-val').textContent = r.occupancyMid;
+      }
+    }
+  }
+
+  document.getElementById('fetch-btn-text').textContent = 'Analyse';
+  if (propId) {
+    statusEl.innerHTML += `<div class="info-box" style="margin-top:6px">💡 <a href="${url}" target="_blank">Open listing in new tab</a> to copy price, size and location details.</div>`;
+  }
+}
+
+function recalcProperty() {
+  const region = document.getElementById('prop-region').value;
+  if (region) {
+    const r = REGIONS.find(x => x.id === region);
+    if (r) {
+      const currentNightly = parseInt(document.getElementById('nightly-slider').value);
+      const mid = Math.round((r.nightlyMin + r.nightlyMax) / 2);
+      if (currentNightly < r.nightlyMin || currentNightly > r.nightlyMax) {
+        document.getElementById('nightly-slider').value = mid;
+        document.getElementById('nightly-val').textContent = mid;
+      }
+    }
+  }
+}
+
+function runFullAnalysis() {
+  const price = parseFloat(document.getElementById('prop-price').value) || 115000;
+  const weeks = parseInt(document.getElementById('weeks-slider').value) || 18;
+  const nightly = parseInt(document.getElementById('nightly-slider').value) || 85;
+  const personalWks = parseInt(document.getElementById('personal-slider').value) || 3;
+  const regionId = document.getElementById('prop-region').value;
+  const address = document.getElementById('prop-address').value;
+  const propType = document.getElementById('prop-type').value;
+
+  // Gross income
+  const ukRate = getUkRate();
+  const ukRatePct = Math.round(ukRate * 100);
+  const netAdditionalPct = ukRatePct - 21;
+  const grossIncome = nightly * 7 * weeks;
+  const platformFee = Math.round(grossIncome * 0.03);
+  const mgmtFee = Math.round(grossIncome * 0.22);
+  const incomeAfterMgmt = grossIncome - platformFee - mgmtFee;
+  const italyTax = Math.round(grossIncome * 0.21); // on gross
+  const ukAdditionalTax = Math.round(incomeAfterMgmt * (ukRate - 0.21)); // dynamic: 40%/45% minus FTC
+  const runningCosts = estimateRunningCosts(price, regionId);
+  const netIncome = grossIncome - platformFee - mgmtFee - italyTax - ukAdditionalTax - runningCosts;
+  const grossYield = ((grossIncome / price) * 100).toFixed(1);
+  const netYield = ((netIncome / price) * 100).toFixed(1);
+
+  // Update KPIs
+  document.getElementById('kpi-gross-income').textContent = '€' + grossIncome.toLocaleString();
+  document.getElementById('kpi-net-income').textContent = '€' + Math.max(0, netIncome).toLocaleString();
+  document.getElementById('kpi-yield').textContent = grossYield + '%';
+  document.getElementById('kpi-net-yield').textContent = netYield + '%';
+
+  // Breakdown
+  const fmt = n => (n < 0 ? '–€' : '€') + Math.abs(n).toLocaleString();
+  document.getElementById('r-gross').textContent = fmt(grossIncome);
+  document.getElementById('r-platform').textContent = '–€' + platformFee.toLocaleString();
+  document.getElementById('r-mgmt').textContent = '–€' + mgmtFee.toLocaleString();
+  document.getElementById('r-after-mgmt').textContent = '€' + incomeAfterMgmt.toLocaleString();
+  document.getElementById('r-italy-tax').textContent = '–€' + italyTax.toLocaleString();
+  document.getElementById('r-uk-tax').textContent = '–€' + ukAdditionalTax.toLocaleString();
+  const ukLabel = document.getElementById('r-uk-tax-label');
+  if (ukLabel) ukLabel.textContent = `🇬🇧 UK additional tax (~${netAdditionalPct}% after FTC)`;
+  document.getElementById('r-running').textContent = '–€' + runningCosts.toLocaleString();
+  document.getElementById('r-net').textContent = fmt(netIncome);
+  document.getElementById('r-net').className = 'value ' + (netIncome >= 0 ? 'value-green' : 'value-red');
+
+  // Purchase costs
+  renderPurchaseCosts(price, 'purchase-costs-result');
+
+  // 5-yr projection chart
+  render5yrProjectionChart(price, netIncome, grossIncome);
+
+  // Show results
+  document.getElementById('property-result').classList.add('show');
+
+  // Driving time
+  if (address && settings.mapsApiKey) {
+    getDrivingTime(address);
+  }
+}
+
+function estimateRunningCosts(price, regionId) {
+  const imu = Math.round(price * 0.004);
+  const tari = 260;
+  const insurance = 520;
+  const maintenance = Math.round(price * 0.01);
+  const utilities = 720;
+  const broadband = 420;
+  const accountant = 450;
+  return imu + tari + insurance + maintenance + utilities + broadband + accountant;
+}
+
+function renderPurchaseCosts(price, targetId) {
+  const regTax = Math.max(1000, Math.round(price * 0.018));
+  const notary = Math.min(3500, Math.max(1800, Math.round(price * 0.022)));
+  const agentFee = Math.round(price * 0.0366);
+  const legal = 2000;
+  const survey = 700;
+  const misc = 400;
+  const total = regTax + notary + agentFee + legal + survey + misc;
+
+  const el = document.getElementById(targetId);
+  if (!el) return;
+  el.innerHTML = `
+    <table>
+      <thead><tr><th>Cost Item</th><th>Estimate (€)</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Registration tax (Imposta di Registro)</td><td>€${regTax.toLocaleString()}</td><td>9% of cadastral value (~2% market value for south Italy)</td></tr>
+        <tr><td>Notary fees</td><td>€${notary.toLocaleString()}</td><td>Legally required; fixed scale</td></tr>
+        <tr><td>Estate agent fee (buyer's side)</td><td>€${agentFee.toLocaleString()}</td><td>3% + 22% VAT</td></tr>
+        <tr><td>Italian solicitor fees</td><td>€${legal.toLocaleString()}</td><td>Strongly recommended for non-residents</td></tr>
+        <tr><td>Surveyor / geometric</td><td>€${survey.toLocaleString()}</td><td>Optional but recommended</td></tr>
+        <tr><td>Misc (translation, bank transfer, CIN)</td><td>€${misc.toLocaleString()}</td><td>Includes CIN national registration</td></tr>
+      </tbody>
+      <tfoot><tr class="tfoot-row"><td><strong>Total buying costs</strong></td><td><strong>€${total.toLocaleString()}</strong></td><td><strong>${((total/price)*100).toFixed(1)}% of purchase price</strong></td></tr></tfoot>
+    </table>
+    <p class="footnote">Total including property: €${(price + total).toLocaleString()} (~£${Math.round((price + total)/1.17).toLocaleString()})</p>
+  `;
+}
+
+function render5yrProjectionChart(price, netIncome, grossIncome) {
+  const ctx = document.getElementById('projection-chart');
+  if (!ctx) return;
+  if (projectionChart) projectionChart.destroy();
+
+  const purchaseCosts = Math.round(price * 0.095);
+  let cumulative = -price - purchaseCosts;
+  const labels = ['Purchase', 'Yr 1', 'Yr 2', 'Yr 3', 'Yr 4', 'Yr 5'];
+  const cumulativeData = [cumulative];
+  const annualNetData = [0];
+  for (let i = 1; i <= 5; i++) {
+    const appreciation = price * Math.pow(1.03, i) - price;
+    cumulative += netIncome;
+    cumulativeData.push(Math.round(cumulative));
+    annualNetData.push(Math.round(netIncome));
+  }
+
+  projectionChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Cumulative Position (€)',
+          data: cumulativeData,
+          backgroundColor: cumulativeData.map(v => v >= 0 ? 'rgba(46,125,50,0.75)' : 'rgba(184,76,0,0.75)'),
+          borderRadius: 6,
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => '€' + ctx.raw.toLocaleString() } } },
+      scales: {
+        y: { ticks: { callback: v => '€' + (v/1000).toFixed(0) + 'k' }, grid: { color: '#eee' } }
+      }
+    }
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+// GOOGLE MAPS DRIVING TIME
+// ─────────────────────────────────────────────────────────────
+function getDrivingTime(destination) {
+  if (!settings.mapsApiKey) return;
+  const card = document.getElementById('driving-card');
+  card.style.display = 'block';
+  document.getElementById('driving-time-text').textContent = '⏳';
+  document.getElementById('driving-route-text').textContent = 'Calculating route via ferry/Eurotunnel...';
+
+  const origin = encodeURIComponent(settings.home);
+  const dest = encodeURIComponent(destination + ', Italy');
+  const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${origin}&destinations=${dest}&mode=driving&key=${settings.mapsApiKey}`;
+
+  // Due to CORS, use a serverless proxy approach or fetch without-cors note
+  // For the POC, we'll call via the Maps Distance Matrix API (requires server-side in production)
+  // Browser can call this JS API via the maps JS SDK instead:
+  loadGoogleMapsAndCalculate(destination);
+}
+
+function loadGoogleMapsAndCalculate(destination) {
+  if (window.google && window.google.maps) {
+    calcDrivingTime(destination);
+    return;
+  }
+  const script = document.createElement('script');
+  script.src = `https://maps.googleapis.com/maps/api/js?key=${settings.mapsApiKey}&callback=googleMapsLoaded&libraries=geometry`;
+  script.async = true;
+  window.googleMapsLoaded = () => calcDrivingTime(destination);
+  document.head.appendChild(script);
+}
+
+function calcDrivingTime(destination) {
+  const service = new google.maps.DistanceMatrixService();
+  service.getDistanceMatrix({
+    origins: [settings.home],
+    destinations: [destination + (destination.toLowerCase().includes('italy') ? '' : ', Italy')],
+    travelMode: google.maps.TravelMode.DRIVING,
+    unitSystem: google.maps.UnitSystem.METRIC,
+  }, (res, status) => {
+    const card = document.getElementById('driving-card');
+    if (status === 'OK' && res.rows[0].elements[0].status === 'OK') {
+      const el = res.rows[0].elements[0];
+      document.getElementById('driving-time-text').textContent = el.duration.text;
+      document.getElementById('driving-route-text').textContent = `📍 ${el.distance.text} — From Hastings via Eurotunnel/ferry`;
+    } else {
+      document.getElementById('driving-time-text').textContent = '⚠️ Unavailable';
+      document.getElementById('driving-route-text').textContent = 'Check address format or API key. Typical Italy drive: 20–35 hrs.';
+    }
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+// TAX EXAMPLE
+// ─────────────────────────────────────────────────────────────
+function calcTaxExample() {
+  const income = parseInt(document.getElementById('tax-ex-slider').value) || 10000;
+  const ukRate = getUkRate();
+  const ukRatePct = Math.round(ukRate * 100);
+  const italyTax = Math.round(income * 0.21);
+  const mgmt = Math.round(income * 0.22);
+  const netAfterMgmt = income - mgmt;
+  const ukGross = Math.round(netAfterMgmt * ukRate);
+  const ftcCredit = Math.min(italyTax, Math.round(income * ukRate));
+  const ukAdditional = Math.max(0, ukGross - italyTax);
+  const netIncome = income - italyTax - ukAdditional - mgmt;
+  const effectiveRate = Math.round(((italyTax + ukAdditional) / income) * 100);
+  const netAdditionalPct = ukRatePct - 21;
+
+  document.getElementById('tax-example').innerHTML = `
+    <div class="result-box" style="font-size:0.85rem">
+      <div class="result-row"><span class="label">Gross rental income</span><span class="value">€${income.toLocaleString()}</span></div>
+      <div class="result-row"><span class="label">🇮🇹 Cedolare Secca (21% of gross)</span><span class="value value-red">–€${italyTax.toLocaleString()}</span></div>
+      <div class="result-row"><span class="label">Management costs (22%)</span><span class="value value-red">–€${mgmt.toLocaleString()}</span></div>
+      <div class="result-row"><span class="label">UK tax base (net of mgmt)</span><span class="value">€${netAfterMgmt.toLocaleString()}</span></div>
+      <div class="result-row"><span class="label">UK gross tax (${ukRatePct}%)</span><span class="value">€${ukGross.toLocaleString()}</span></div>
+      <div class="result-row"><span class="label">Less: Foreign Tax Credit (Italian tax)</span><span class="value value-green">–€${italyTax.toLocaleString()}</span></div>
+      <div class="result-row"><span class="label">🇬🇧 Net additional UK tax (~${netAdditionalPct}%)</span><span class="value value-red">–€${ukAdditional.toLocaleString()}</span></div>
+      <div class="result-row"><span class="label">Total tax (Italy + UK combined)</span><span class="value value-red">€${(italyTax + ukAdditional).toLocaleString()} (${effectiveRate}% effective)</span></div>
+      <div class="result-row"><span class="label">Net income after tax & management</span><span class="value value-green">€${netIncome.toLocaleString()}</span></div>
+    </div>
+  `;
+
+  const ctx = document.getElementById('tax-donut-chart');
+  if (!ctx) return;
+  if (taxDonutChart) taxDonutChart.destroy();
+  taxDonutChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Net to you', 'Italian tax (21%)', 'UK additional tax', 'Management (22%)'],
+      datasets: [{
+        data: [Math.max(0, netIncome), italyTax, ukAdditional, mgmt],
+        backgroundColor: ['#4A7C59', '#1A56A8', '#012169', '#E8A838'],
+        borderWidth: 2, borderColor: '#fff',
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'right', labels: { font: { size: 11 }, padding: 12 } },
+        tooltip: { callbacks: { label: ctx => ctx.label + ': €' + ctx.raw.toLocaleString() } }
+      }
+    }
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+// COST CALCULATOR
+// ─────────────────────────────────────────────────────────────
+function calcCosts() {
+  const price = parseFloat(document.getElementById('cc-price').value) || 115000;
+  const size = parseFloat(document.getElementById('cc-size').value) || 80;
+  const useAgent = document.getElementById('cc-agent').value === 'yes';
+  const income = parseFloat(document.getElementById('cc-income').value) || 9500;
+
+  // Purchase costs
+  const regTax = Math.max(1000, Math.round(price * 0.018));
+  const notary = Math.min(3500, Math.max(1800, Math.round(price * 0.022)));
+  const agentFee = Math.round(price * 0.0366);
+  const legal = 2000;
+  const survey = 700;
+  const misc = 400;
+  const totalPurchase = regTax + notary + agentFee + legal + survey + misc;
+
+  document.getElementById('purchase-cost-table').innerHTML = `
+    <table>
+      <thead><tr><th>Item</th><th>€</th></tr></thead>
+      <tbody>
+        <tr><td>Registration tax</td><td>€${regTax.toLocaleString()}</td></tr>
+        <tr><td>Notary fees</td><td>€${notary.toLocaleString()}</td></tr>
+        <tr><td>Estate agent (buyer)</td><td>€${agentFee.toLocaleString()}</td></tr>
+        <tr><td>Italian solicitor</td><td>€${legal.toLocaleString()}</td></tr>
+        <tr><td>Survey / geometric</td><td>€${survey.toLocaleString()}</td></tr>
+        <tr><td>Misc (CIN, translation etc.)</td><td>€${misc.toLocaleString()}</td></tr>
+      </tbody>
+      <tfoot><tr class="tfoot-row"><td><strong>Total (${((totalPurchase/price)*100).toFixed(1)}% of price)</strong></td><td><strong>€${totalPurchase.toLocaleString()}</strong></td></tr></tfoot>
+    </table>
+  `;
+
+  // Running costs
+  const imu = Math.round(price * 0.004);
+  const tari = 260;
+  const bldgInsurance = 420;
+  const contentsInsurance = 150;
+  const maintenance = Math.round(price * 0.01);
+  const utilities = 720;
+  const broadband = 420;
+  const accountant = 450;
+  const mgmtFee = useAgent ? Math.round(income * 0.22) : 0;
+  const platformFee = Math.round(income * 0.03);
+  const cinRenewal = 100;
+  const totalRunning = imu + tari + bldgInsurance + contentsInsurance + maintenance + utilities + broadband + accountant + mgmtFee + platformFee + cinRenewal;
+
+  document.getElementById('running-cost-table').innerHTML = `
+    <table>
+      <thead><tr><th>Item</th><th>€/year</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>IMU (property tax)</td><td>€${imu.toLocaleString()}</td><td>~0.4% of market value</td></tr>
+        <tr><td>TARI (waste / bins)</td><td>€${tari.toLocaleString()}</td><td>Set by local comune</td></tr>
+        <tr><td>Building insurance</td><td>€${bldgInsurance.toLocaleString()}</td><td>Get specialist holiday let policy</td></tr>
+        <tr><td>Contents insurance</td><td>€${contentsInsurance.toLocaleString()}</td><td>Guests present risk</td></tr>
+        <tr><td>Maintenance / repairs</td><td>€${maintenance.toLocaleString()}</td><td>1% of value; budget more for older property</td></tr>
+        <tr><td>Utilities (standing charges)</td><td>€${utilities.toLocaleString()}</td><td>Electric, water — even when empty</td></tr>
+        <tr><td>Broadband / WiFi</td><td>€${broadband.toLocaleString()}</td><td>Essential for Airbnb rating</td></tr>
+        <tr><td>Italian accountant / tax filing</td><td>€${accountant.toLocaleString()}</td><td>Non-resident filing; ~€300–600</td></tr>
+        <tr><td>UK accountant (SA106)</td><td>€250</td><td>Foreign property pages; often included in SA fees</td></tr>
+        <tr><td>Airbnb / Booking platform fees (3%)</td><td>€${platformFee.toLocaleString()}</td><td>Host service fee on income</td></tr>
+        ${useAgent ? `<tr><td>Letting agent management (22%)</td><td>€${mgmtFee.toLocaleString()}</td><td>Handles check-in, cleaning, comms</td></tr>` : ''}
+        <tr><td>CIN registration renewal</td><td>€${cinRenewal.toLocaleString()}</td><td>National holiday let registration</td></tr>
+      </tbody>
+      <tfoot><tr class="tfoot-row"><td><strong>Total annual running costs</strong></td><td><strong>€${totalRunning.toLocaleString()}</strong></td><td></td></tr></tfoot>
+    </table>
+  `;
+
+  // 5-yr chart
+  render5yrCostChart(price, totalPurchase, income, totalRunning);
+
+  // 5-yr summary
+  const italyTax = Math.round(income * 0.21);
+  const ukNetRate = getUkRate() - 0.21;
+  const ukTax = Math.round(income * ukNetRate);
+  const annualNet = income - italyTax - ukTax - totalRunning;
+  const annualNetAfterMgmt = annualNet;
+  const breakEven = totalPurchase + price;
+  const fiveYrNet = annualNet * 5 - totalPurchase;
+  const fiveYrGross = income * 5;
+
+  document.getElementById('five-year-summary').innerHTML = `
+    <div class="grid-4">
+      <div class="kpi-box"><div class="kpi-value">€${Math.round(annualNet).toLocaleString()}</div><div class="kpi-label">Estimated Annual Net Income</div></div>
+      <div class="kpi-box"><div class="kpi-value">€${fiveYrGross.toLocaleString()}</div><div class="kpi-label">5-yr Gross Rental Revenue</div></div>
+      <div class="kpi-box"><div class="kpi-value">€${totalRunning.toLocaleString()}</div><div class="kpi-label">Annual Running Costs</div></div>
+      <div class="kpi-box"><div class="kpi-value" style="color:${fiveYrNet>0?'var(--green)':'var(--red)'}">€${fiveYrNet.toLocaleString()}</div><div class="kpi-label">5-yr Net Position (excl. appreciation)</div></div>
+    </div>
+    <p class="footnote" style="margin-top:12px">Note: excludes capital appreciation (typically 2–4%/yr in growing Italian regions) and personal use value. All figures are estimates — seek professional advice before investing.</p>
+  `;
+}
+
+function render5yrCostChart(price, purchaseCosts, annualIncome, annualCosts) {
+  const ctx = document.getElementById('cost-chart');
+  if (!ctx) return;
+  if (costChart) costChart.destroy();
+
+  const italyTax = Math.round(annualIncome * 0.21);
+  const ukTax = Math.round(annualIncome * (getUkRate() - 0.21));
+  const labels = ['Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5'];
+  const rentalIncome = labels.map(() => annualIncome);
+  const allCosts = labels.map(() => annualCosts + italyTax + ukTax);
+  const netBars = labels.map(() => annualIncome - annualCosts - italyTax - ukTax);
+
+  costChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Gross Rental Income', data: rentalIncome, backgroundColor: 'rgba(74,124,89,0.8)', borderRadius: 4 },
+        { label: 'All Costs + Tax', data: allCosts, backgroundColor: 'rgba(184,76,0,0.72)', borderRadius: 4 },
+        { label: 'Net Income', data: netBars, backgroundColor: 'rgba(232,168,56,0.85)', borderRadius: 4 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: c => c.dataset.label + ': €' + c.raw.toLocaleString() } } },
+      scales: { y: { ticks: { callback: v => '€' + v.toLocaleString() }, grid: { color: '#eee' } } }
+    }
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+// SETTINGS
+// ─────────────────────────────────────────────────────────────
+function saveApiKey() {
+  settings.mapsApiKey = document.getElementById('maps-api-key').value.trim();
+}
+
+function testApiKey() {
+  const key = document.getElementById('maps-api-key').value.trim();
+  if (!key) { document.getElementById('api-key-status').innerHTML = '<div class="warn-box">⚠️ Please enter your API key first.</div>'; return; }
+  document.getElementById('api-key-status').innerHTML = '<div class="info-box">⏳ Testing key with a sample distance request...</div>';
+  settings.mapsApiKey = key;
+  // Test by loading Maps and doing a simple distance check
+  loadGoogleMapsAndCalculate('Rome, Italy');
+  setTimeout(() => {
+    const card = document.getElementById('driving-card');
+    const time = document.getElementById('driving-time-text').textContent;
+    if (time && time !== '⏳' && time !== '⚠️ Unavailable') {
+      document.getElementById('api-key-status').innerHTML = `<div class="success-box">✅ API key working! Test: Hastings → Rome = ${time}</div>`;
+    } else {
+      document.getElementById('api-key-status').innerHTML = '<div class="warn-box">⚠️ Could not verify. Check the key is enabled for Distance Matrix API, or try running an analysis with a property address.</div>';
+    }
+  }, 6000);
+}
+
+function saveSettings() {
+  settings.taxBand = document.getElementById('s-taxband').value;
+  settings.budget = parseFloat(document.getElementById('s-budget').value);
+  settings.fx = parseFloat(document.getElementById('s-fx').value);
+  settings.home = document.getElementById('s-home').value;
+  settings.mapsApiKey = document.getElementById('maps-api-key').value.trim();
+  document.getElementById('settings-saved').style.display = 'block';
+  setTimeout(() => document.getElementById('settings-saved').style.display = 'none', 2500);
+}
+
+// ─────────────────────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  // Pre-fill settings
+  document.getElementById('maps-api-key').value = settings.mapsApiKey;
+  document.getElementById('s-home').value = settings.home;
+
+  renderRegions();
+  calcTaxExample();
+  calcCosts();
+  runFullAnalysis();
+});
+
+// ─────────────────────────────────────────────────────────────
+// REGION MAP
+// ─────────────────────────────────────────────────────────────
+
+// Simplified polygon coordinates in GeoJSON [longitude, latitude] format
+const REGION_POLYGONS = {
+  veneto:     [[10.9,46.6],[12.8,46.6],[12.7,46.0],[12.5,45.5],[11.9,45.2],[11.0,45.1],[10.5,45.7],[10.9,46.6]],
+  friuli:     [[12.8,46.5],[13.9,46.6],[13.9,45.8],[13.1,45.5],[12.7,45.8],[12.8,46.5]],
+  marche:     [[12.7,43.9],[13.0,44.0],[13.8,43.8],[14.0,43.0],[13.8,42.8],[13.0,42.9],[12.7,43.3],[12.7,43.9]],
+  abruzzo:    [[13.0,42.9],[13.7,42.8],[14.5,42.6],[14.8,42.0],[14.3,41.8],[13.7,41.8],[13.2,42.0],[13.0,42.9]],
+  molise:     [[14.0,41.8],[14.5,42.0],[15.2,41.9],[15.2,41.5],[14.8,41.3],[14.2,41.3],[14.0,41.8]],
+  puglia:     [[14.9,41.8],[15.8,41.6],[16.2,41.8],[16.0,41.0],[16.8,40.8],[18.1,40.5],[18.5,40.1],[18.4,39.9],[18.1,40.0],[16.5,40.1],[15.9,40.1],[15.5,40.4],[15.2,41.3],[14.9,41.8]],
+  basilicata: [[15.2,41.3],[15.5,40.9],[15.8,40.6],[16.2,40.5],[16.5,40.0],[16.3,39.9],[15.9,39.9],[15.5,40.1],[15.2,40.3],[14.9,40.5],[15.1,40.8],[15.2,41.3]],
+  calabria:   [[15.6,40.1],[15.8,39.8],[16.0,39.6],[16.2,39.0],[16.5,38.5],[16.5,37.9],[16.0,37.9],[15.8,38.2],[15.6,38.8],[15.7,39.4],[15.6,40.1]],
+  sicilia:    [[12.5,38.3],[13.5,38.2],[14.5,38.0],[15.3,37.8],[15.7,37.6],[15.7,37.2],[15.3,37.0],[15.0,36.8],[14.0,36.6],[13.0,36.7],[12.4,37.0],[12.2,37.6],[12.5,38.3]],
+  sardegna:   [[8.2,41.2],[8.8,41.3],[9.5,41.2],[9.8,40.8],[9.7,40.0],[9.5,39.2],[9.2,38.9],[8.6,38.8],[8.2,39.0],[7.9,39.7],[8.0,40.4],[8.2,41.2]],
+};
+
+// Approximate visual centre for label placement [lat, lng]
+const REGION_LABEL_CENTRES = {
+  veneto:     [45.7, 11.8],
+  friuli:     [46.1, 13.3],
+  marche:     [43.4, 13.3],
+  abruzzo:    [42.3, 13.9],
+  molise:     [41.6, 14.7],
+  puglia:     [40.6, 16.7],
+  basilicata: [40.4, 15.9],
+  calabria:   [38.9, 16.2],
+  sicilia:    [37.6, 14.1],
+  sardegna:   [40.1, 9.0],
+};
+
+const RATING_COLOURS = {
+  2: { fill: '#BDD7EE', border: '#7EAEE0' },
+  3: { fill: '#7EAEE0', border: '#3A7CC7' },
+  4: { fill: '#3A7CC7', border: '#1A4F9F' },
+  5: { fill: '#1A4F9F', border: '#0D2D6B' },
+};
+
+let leafletMap   = null;
+let regionLayers = {};
+let selectedMapRegion = null;
+
+function initRegionMap() {
+  if (!window.L) { setTimeout(initRegionMap, 100); return; }
+  const mapEl = document.getElementById('italy-map');
+  if (!mapEl) return;
+
+  if (leafletMap) { leafletMap.invalidateSize(); return; }
+
+  leafletMap = L.map('italy-map', {
+    center: [41.8, 13.5], zoom: 5, minZoom: 5, maxZoom: 8,
+  });
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    subdomains: 'abcd', maxZoom: 10,
+  }).addTo(leafletMap);
+
+  REGIONS.forEach(r => {
+    const coords = REGION_POLYGONS[r.id];
+    if (!coords) return;
+    const col = RATING_COLOURS[r.demandRating] || RATING_COLOURS[3];
+
+    const layer = L.geoJSON({
+      type: 'Feature',
+      properties: { id: r.id },
+      geometry: { type: 'Polygon', coordinates: [coords] },
+    }, {
+      style: { fillColor: col.fill, color: col.border, weight: 2, fillOpacity: 0.72 },
+    }).addTo(leafletMap);
+
+    // Tooltip on hover
+    layer.bindTooltip(
+      `<strong>${r.emoji} ${r.name}</strong><br>${'★'.repeat(r.demandRating)}${'☆'.repeat(5-r.demandRating)} &nbsp;·&nbsp; ${r.yieldMin}–${r.yieldMax}% yield`,
+      { sticky: true, className: 'leaflet-tooltip', direction: 'top' }
+    );
+
+    layer.on('mouseover', e => {
+      if (selectedMapRegion !== r.id)
+        e.target.setStyle({ fillOpacity: 0.9, weight: 3 });
+    });
+    layer.on('mouseout', e => {
+      if (selectedMapRegion !== r.id)
+        e.target.setStyle({ fillOpacity: 0.72, weight: 2 });
+    });
+    layer.on('click', () => {
+      // Reset previous selection
+      if (selectedMapRegion && regionLayers[selectedMapRegion]) {
+        const prev = REGIONS.find(x => x.id === selectedMapRegion);
+        if (prev) {
+          const pc = RATING_COLOURS[prev.demandRating] || RATING_COLOURS[3];
+          regionLayers[selectedMapRegion].setStyle({ fillOpacity: 0.72, weight: 2, color: pc.border });
+        }
+      }
+      selectedMapRegion = r.id;
+      layer.setStyle({ fillOpacity: 0.95, weight: 3, color: '#0D2D6B' });
+      showMapRegionDetail(r.id);
+    });
+
+    regionLayers[r.id] = layer;
+
+    // Rating label at region centre
+    const centre = REGION_LABEL_CENTRES[r.id];
+    if (centre) {
+      L.marker(centre, {
+        icon: L.divIcon({
+          className: 'region-map-label',
+          html: `<div class="map-label-inner">${r.emoji} <strong>${r.name.replace('Friuli-Venezia Giulia','Friuli VG').replace('Le Marche','Le Marche')}</strong><br><span style="color:#E8A838;font-size:10px">${'★'.repeat(r.demandRating)}</span></div>`,
+          iconSize: [90, 36], iconAnchor: [45, 18],
+        }),
+        interactive: false,
+      }).addTo(leafletMap);
+    }
+  });
+}
+
+function showMapRegionDetail(id) {
+  const r = REGIONS.find(x => x.id === id);
+  if (!r) return;
+  const stars   = '★'.repeat(r.demandRating) + '☆'.repeat(5 - r.demandRating);
+  const trendLabel = {'growing':'↑ Growing','growing-fast':'↑↑ Fast growth','very-strong':'↑↑↑ Very strong','stable':'→ Stable'}[r.trend];
+  const annualIncome = Math.round(((r.nightlyMin + r.nightlyMax) / 2) * r.occupancyMid * 7);
+  const budgetText = {excellent:'✅ Excellent fit',good:'🟡 Good fit',possible:'⚠️ Possible — rising prices'}[r.budgetFit];
+
+  document.getElementById('map-region-detail').innerHTML = `
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px">
+        <div>
+          <div style="font-size:2rem; line-height:1; margin-bottom:4px">${r.emoji}</div>
+          <div style="font-size:1.1rem; font-weight:700; color:var(--text)">${r.name}</div>
+          <div style="font-size:0.8rem; color:var(--text-med); margin-top:2px">${r.tagline}</div>
+        </div>
+        <div style="text-align:right; flex-shrink:0; margin-left:12px">
+          <div style="color:var(--amber); font-size:1.05rem; letter-spacing:1px">${stars}</div>
+          <div style="font-size:0.7rem; color:var(--text-light)">Demand rating</div>
+          <div style="margin-top:6px; font-size:0.75rem; font-weight:600; color:var(--primary)">${trendLabel}</div>
+        </div>
+      </div>
+
+      <div class="result-box">
+        <div class="result-row"><span class="label">Typical price</span><span class="value">€${(r.typicalPrice/1000).toFixed(0)}k</span></div>
+        <div class="result-row"><span class="label">Gross yield</span><span class="value">${r.yieldMin}–${r.yieldMax}%</span></div>
+        <div class="result-row"><span class="label">Est. rental income</span><span class="value">€${Math.round(annualIncome/1000)}k/yr</span></div>
+        <div class="result-row"><span class="label">Season</span><span class="value">${r.occupancyMin}–${r.occupancyMax} wks/yr</span></div>
+        <div class="result-row"><span class="label">Drive from Hastings</span><span class="value">~${r.drivingHrsBase}–${r.drivingHrsBase+3} hrs</span></div>
+        <div class="result-row"><span class="label">Budget fit (£100–130k)</span><span class="value">${budgetText}</span></div>
+      </div>
+
+      <p style="font-size:0.82rem; color:var(--text-med); line-height:1.5; margin-bottom:16px">${r.notes}</p>
+
+      <button class="btn-primary" style="width:100%; justify-content:center"
+        onclick="loadRegionIntoAnalyser('${r.id}'); switchTabDirect('analyser')">
+        Open Full Analysis →
+      </button>
+    </div>
+  `;
+}
+</script>
+</body>
+</html>
