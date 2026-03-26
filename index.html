@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🇮🇹 Italy Holiday Let Analyser App</title>
+<title>🇮🇹 Italy Holiday Let Analyser</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -407,6 +407,15 @@
           <hr style="margin:16px 0; border-color:var(--cream-dark)">
           <div class="form-section-title">Rental assumptions</div>
 
+          <div class="input-group" style="margin-bottom:14px">
+            <label>Management approach</label>
+            <div class="tax-toggle" style="width:100%">
+              <button id="mgmt-agent-btn" class="active" style="flex:1" onclick="setMgmtMode('agent')">🏢 Letting Agent (22%)</button>
+              <button id="mgmt-self-btn" style="flex:1" onclick="setMgmtMode('self')">🙋 Self-Managed</button>
+            </div>
+            <div class="hint" id="mgmt-mode-hint">Agent handles check-in, cleaning &amp; guest comms — fee deducted from income</div>
+          </div>
+
           <div class="slider-group">
             <label>Weeks rented per year <span id="weeks-val">18</span></label>
             <input type="range" id="weeks-slider" min="6" max="32" value="18" oninput="document.getElementById('weeks-val').textContent=this.value; recalcProperty()">
@@ -452,14 +461,14 @@
         <div class="result-box">
           <div class="result-row"><span class="label">Gross rental income</span><span class="value" id="r-gross">—</span></div>
           <div class="result-row"><span class="label">Platform fees (Airbnb ~3%)</span><span class="value value-red" id="r-platform">—</span></div>
-          <div class="result-row"><span class="label">Management agent (~22%)</span><span class="value value-red" id="r-mgmt">—</span></div>
-          <div class="result-row"><span class="label">Income after management</span><span class="value" id="r-after-mgmt">—</span></div>
+          <div class="result-row" id="r-mgmt-row"><span class="label" id="r-mgmt-label">Letting agent (22%)</span><span class="value value-red" id="r-mgmt">—</span></div>
+          <div class="result-row"><span class="label" id="r-after-mgmt-label">Income after agent fee</span><span class="value" id="r-after-mgmt">—</span></div>
           <div class="result-row"><span class="label">🇮🇹 Italian tax (Cedolare Secca 21%)</span><span class="value value-red" id="r-italy-tax">—</span></div>
           <div class="result-row"><span class="label" id="r-uk-tax-label">🇬🇧 UK additional tax (~19%)</span><span class="value value-red" id="r-uk-tax">—</span></div>
           <div class="result-row"><span class="label">Annual running costs (IMU, ins. etc.)</span><span class="value value-red" id="r-running">—</span></div>
           <div class="result-row"><span class="label">Net income after everything</span><span class="value value-green" id="r-net">—</span></div>
         </div>
-        <p class="footnote">Management agent cost is optional — remove if self-managing. Tax figures are estimates; seek professional advice.</p>
+        <p class="footnote" id="mgmt-footnote">Agent fee (22%) deducted before tax calculation. Tax figures are estimates; seek professional advice.</p>
       </div>
 
       <div class="card" style="margin-bottom:16px">
@@ -700,10 +709,10 @@
       <div id="italy-map"></div>
       <div class="map-legend">
         <span style="font-size:0.8rem; font-weight:600; color:var(--text-med); margin-right:4px">Demand:</span>
-        <div class="map-legend-item"><div class="map-legend-swatch" style="background:#BDD7EE; border:1px solid #7EAEE0"></div>⭐⭐ Limited</div>
-        <div class="map-legend-item"><div class="map-legend-swatch" style="background:#7EAEE0; border:1px solid #3A7CC7"></div>⭐⭐⭐ Moderate</div>
-        <div class="map-legend-item"><div class="map-legend-swatch" style="background:#3A7CC7; border:1px solid #1A4F9F"></div>⭐⭐⭐⭐ Strong</div>
-        <div class="map-legend-item"><div class="map-legend-swatch" style="background:#1A4F9F; border:1px solid #0D2D6B"></div>⭐⭐⭐⭐⭐ Very high</div>
+        <div class="map-legend-item"><div class="map-legend-swatch" style="background:#A9D0EE; border:1px solid #6BAED6"></div>⭐⭐ Limited</div>
+        <div class="map-legend-item"><div class="map-legend-swatch" style="background:#5B9FD4; border:1px solid #2B72B8"></div>⭐⭐⭐ Moderate</div>
+        <div class="map-legend-item"><div class="map-legend-swatch" style="background:#2B72B8; border:1px solid #1A4F9F"></div>⭐⭐⭐⭐ Strong</div>
+        <div class="map-legend-item"><div class="map-legend-swatch" style="background:#0D3D7A; border:1px solid #07254D"></div>⭐⭐⭐⭐⭐ Very high</div>
       </div>
     </div>
     <div id="map-region-detail">
@@ -917,10 +926,29 @@ const REGIONS = [
 let settings = {
   mapsApiKey: 'AIzaSyBs6VLkAkSyw3C7iSmbChTfgF61ZtPSIio',
   taxBand: 'higher',
+  useAgent: true,
   budget: 115000,
   fx: 1.17,
   home: '64 Canute Road, Hastings, TN35 5HT, UK',
 };
+
+function setMgmtMode(mode) {
+  settings.useAgent = (mode === 'agent');
+  document.getElementById('mgmt-agent-btn').classList.toggle('active', mode === 'agent');
+  document.getElementById('mgmt-self-btn').classList.toggle('active', mode === 'self');
+
+  const hint = document.getElementById('mgmt-mode-hint');
+  if (hint) hint.textContent = mode === 'agent'
+    ? 'Agent handles check-in, cleaning & guest comms — fee deducted from income'
+    : 'You handle bookings, check-in & cleaning — no agent fee, but more time commitment';
+
+  // Keep Cost Calculator dropdown in sync
+  const ccAgent = document.getElementById('cc-agent');
+  if (ccAgent) ccAgent.value = mode === 'agent' ? 'yes' : 'no';
+
+  runFullAnalysis();
+  calcCosts();
+}
 
 function getUkRate() {
   return settings.taxBand === 'additional' ? 0.45 : 0.40;
@@ -1256,7 +1284,25 @@ function runFullAnalysis() {
   const netAdditionalPct = ukRatePct - 21;
   const grossIncome = nightly * 7 * weeks;
   const platformFee = Math.round(grossIncome * 0.03);
-  const mgmtFee = Math.round(grossIncome * 0.22);
+  const mgmtFee = settings.useAgent ? Math.round(grossIncome * 0.22) : 0;
+
+  // Update mgmt row labels and footnote based on mode
+  const mgmtLabelEl = document.getElementById('r-mgmt-label');
+  const afterMgmtLabelEl = document.getElementById('r-after-mgmt-label');
+  const footnoteEl = document.getElementById('mgmt-footnote');
+  const mgmtRowEl = document.getElementById('r-mgmt-row');
+  if (settings.useAgent) {
+    if (mgmtLabelEl) mgmtLabelEl.textContent = 'Letting agent (22%)';
+    if (afterMgmtLabelEl) afterMgmtLabelEl.textContent = 'Income after agent fee';
+    if (footnoteEl) footnoteEl.textContent = 'Agent fee (22%) deducted before tax calculation. Tax figures are estimates; seek professional advice.';
+    if (mgmtRowEl) mgmtRowEl.style.display = '';
+  } else {
+    if (mgmtLabelEl) mgmtLabelEl.textContent = 'Letting agent fee';
+    if (afterMgmtLabelEl) afterMgmtLabelEl.textContent = 'Income (self-managed, no agent fee)';
+    if (footnoteEl) footnoteEl.textContent = 'Self-managed: no agent fee applied. You will still have cleaning & key exchange costs not included here. Tax figures are estimates; seek professional advice.';
+    if (mgmtRowEl) mgmtRowEl.style.display = 'none';
+  }
+
   const incomeAfterMgmt = grossIncome - platformFee - mgmtFee;
   const italyTax = Math.round(grossIncome * 0.21); // on gross
   const ukAdditionalTax = Math.round(incomeAfterMgmt * (ukRate - 0.21)); // dynamic: 40%/45% minus FTC
@@ -1689,10 +1735,11 @@ const REGION_LABEL_CENTRES = {
 };
 
 const RATING_COLOURS = {
-  2: { fill: '#BDD7EE', border: '#7EAEE0' },
-  3: { fill: '#7EAEE0', border: '#3A7CC7' },
-  4: { fill: '#3A7CC7', border: '#1A4F9F' },
-  5: { fill: '#1A4F9F', border: '#0D2D6B' },
+  1: { fill: '#D6EAF8', border: '#A9CCE3' },
+  2: { fill: '#A9D0EE', border: '#6BAED6' },
+  3: { fill: '#5B9FD4', border: '#2B72B8' },
+  4: { fill: '#2B72B8', border: '#1A4F9F' },
+  5: { fill: '#0D3D7A', border: '#07254D' },
 };
 
 let leafletMap   = null;
@@ -1725,7 +1772,7 @@ function initRegionMap() {
       properties: { id: r.id },
       geometry: { type: 'Polygon', coordinates: [coords] },
     }, {
-      style: { fillColor: col.fill, color: col.border, weight: 2, fillOpacity: 0.72 },
+      style: { fillColor: col.fill, color: col.border, weight: 2, fillOpacity: 0.65 },
     }).addTo(leafletMap);
 
     // Tooltip on hover
@@ -1764,8 +1811,8 @@ function initRegionMap() {
       L.marker(centre, {
         icon: L.divIcon({
           className: 'region-map-label',
-          html: `<div class="map-label-inner">${r.emoji} <strong>${r.name.replace('Friuli-Venezia Giulia','Friuli VG').replace('Le Marche','Le Marche')}</strong><br><span style="color:#E8A838;font-size:10px">${'★'.repeat(r.demandRating)}</span></div>`,
-          iconSize: [90, 36], iconAnchor: [45, 18],
+          html: `<div class="map-label-inner">${r.emoji} <strong>${r.name.replace('Friuli-Venezia Giulia','Friuli VG')}</strong></div>`,
+          iconSize: [90, 24], iconAnchor: [45, 12],
         }),
         interactive: false,
       }).addTo(leafletMap);
