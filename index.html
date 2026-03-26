@@ -1787,7 +1787,7 @@ function initRegionMap() {
     });
     layer.on('mouseout', e => {
       if (selectedMapRegion !== r.id)
-        e.target.setStyle({ fillOpacity: 0.72, weight: 2 });
+        e.target.setStyle({ fillOpacity: 0.65, weight: 2 });
     });
     layer.on('click', () => {
       // Reset previous selection
@@ -1804,19 +1804,6 @@ function initRegionMap() {
     });
 
     regionLayers[r.id] = layer;
-
-    // Rating label at region centre
-    const centre = REGION_LABEL_CENTRES[r.id];
-    if (centre) {
-      L.marker(centre, {
-        icon: L.divIcon({
-          className: 'region-map-label',
-          html: `<div class="map-label-inner">${r.emoji} <strong>${r.name.replace('Friuli-Venezia Giulia','Friuli VG')}</strong></div>`,
-          iconSize: [90, 24], iconAnchor: [45, 12],
-        }),
-        interactive: false,
-      }).addTo(leafletMap);
-    }
   });
 }
 
